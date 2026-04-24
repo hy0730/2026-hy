@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>우리 문화유산 보호하기</title>
+    <style>
+        /* === 폰트 및 기본 설정 === */
+        @import url('https://fonts.googleapis.com/css2?family=DungGeunMo&display=swap');
+        
+        body { 
+            background-color: #111; 
+            color: #eee; 
+            font-family: 'DungGeunMo', sans-serif; /* 레트로 폰트 */
+            margin: 0; 
+            height: 100vh; 
+            overflow: hidden; 
+            display: flex; 
+            flex-direction: column; 
+            user-select: none;
+        }
+
+        button { cursor: pointer; border: none; font-family: inherit; -webkit-tap-highlight-color: transparent; }
+        
+        /* 화면 관리 */
+        .screen { display: none; width: 100%; height: 100%; flex-direction: column; align-items: center; position: absolute; top:0; left:0; background: #222; z-index: 1; }
+        .active { display: flex; z-index: 10; }
+
+        /* === 아이콘 스타일 (SVG) === */
+        .icon { width: 24px; height: 24px; vertical-align: middle; display: inline-block; }
+        .icon-lg { width: 48px; height: 48px; }
+        .icon-xl { width: 80px; height: 80px; }
+
+        /* === UI 컴포넌트 === */
+        .navbar { 
+            width: 100%; padding: 15px; background: #333; border-bottom: 4px solid #000; 
+            display: flex; justify-content: space-between; align-items: center; box-sizing: border-box; z-index: 20;
+        }
+        .btn-back { 
+            background: #555; color: white; padding: 5px 15px; border-radius: 4px; 
+            border: 2px solid #000; box-shadow: 0 4px 0 #000; 
+        }
+        .btn-back:active { transform: translateY(4px); box-shadow: none; }
+
+        .coin-box { 
+            background: rgba(0,0,0,0.5); padding: 5px 15px; border-radius: 20px; 
+            border: 2px solid #ffd700; color: #ffd700; font-weight: bold; display: flex; align-items: center; gap: 5px;
+        }
+
+        /* === 메인 화면 === */
+        #main-screen { justify-content: center; background: linear-gradient(135deg, #2c3e50, #000); }
+        .title { font-size: 40px; color: #f1c40f; text-shadow: 4px 4px 0 #000; margin-bottom: 30px; text-align: center; }
+        
+        .menu-btn { 
+            width: 280px; padding: 15px; margin: 10px; font-size: 20px; color: white; 
+            border: 3px solid #000; border-radius: 8px; box-shadow: 0 6px 0 #000; 
+            display: flex; justify-content: space-between; align-items: center; padding-left: 20px; padding-right: 20px;
+        }
+        .menu-btn:active { transform: translateY(6px); box-shadow: none; }
+
+        /* === 게임 화면 (UI 겹침 해결) === */
+        #game-area { 
+            position: relative; width: 100%; flex: 1; background: #000; overflow: hidden; 
+            display: flex; justify-content: center; align-items: center;
+        }
+        #target-img { width: 100%; height: 100%; object-fit: cover; transition: filter 0.5s; image-rendering: pixelated; }
+
+        /* 상단 상태바 */
+        .status-bar { 
+            position: absolute; top: 10px; left: 2%; width: 96%; 
+            display: flex; gap: 10px; z-index: 5; 
+        }
+        .stat-box { 
+            flex: 1; background: rgba(0,0,0,0.8); padding: 8px; border-radius: 8px; border: 2px solid #555; 
+        }
+        .progress { width: 100%; height: 10px; background: #333; margin-top: 5px; border-radius: 5px; overflow: hidden; }
+        .fill { height: 100%; transition: width 0.3s; }
+
+        /* 위기 알림 */
+        #crisis-alert {
+            position: absolute; top: 80px; width: 80%; background: rgba(150, 0, 0, 0.9);
+            border: 4px solid #ff5555; color: white; padding: 15px; border-radius: 10px;
+            text-align: center; display: none; z-index: 20; box-shadow: 0 10px 0 #500;
+            animation: pop 0.3s;
+        }
+        @keyframes pop { from { transform: scale(0); } to { transform: scale(1); } }
+
+        /* 하단 컨트롤 패널 (높이 고정) */
+        #ui-panel { 
+            height: 280px; flex: none; background: #222; border-top: 4px solid #000; 
+            display: flex; flex-direction: column;
+        }
+        
+        /* 1층: 버튼 영역 */
+        .control-row {
+            height: 60px; display: flex; justify-content: space-between; align-items: center; 
+            padding: 0 20px; background: #333; border-bottom: 2px solid #000;
+        }
+        .energy-badge { 
+            background: #3498db; color: white; width: 40px; height: 40px; border-radius: 50%; 
+            display: flex; justify-content: center; align-items: center; font-size: 20px; 
+            border: 3px solid #000; box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
+        }
+        .turn-btn {
+            background: #e67e22; color: white; padding: 8px 20px; border-radius: 20px; 
+            font-weight: bold; border: 3px solid #000; box-shadow: 0 4px 0 #a04000;
+        }
+        .turn-btn:active { transform: translateY(4px); box-shadow: none; }
+
+        /* 2층: 카드 영역 */
+        #hand-area { 
+            flex: 1; display: flex; gap: 10px; padding: 15px; overflow-x: auto; 
+            align-items: center; background: #2a2a2a;
+        }
+
+        /* 카드 스타일 */
+        .card { 
+            width: 100px; height: 140px; background: #444; border: 3px solid #000; border-radius: 8px; 
+            flex-shrink: 0; display: flex; flex-direction: column; align-items: center; text-align: center;
+            position: relative; box-shadow: 0 6px 0 #111; transition: transform 0.1s; cursor: pointer;
+        }
+        .card:active { transform: translateY(6px); box-shadow: none; }
+        .card-cost { position: absolute; top: -10px; left: -10px; width: 25px; height: 25px; background: #3498db; border-radius: 50%; border: 2px solid #000; color: white; font-weight: bold; display: flex; justify-content: center; align-items: center; }
+        .card-img { width: 50px; height: 50px; margin-top: 25px; }
+        .card-title { font-size: 12px; margin: 5px 0; color: #ffd700; }
+        .card-desc { font-size: 10px; color: #ccc; padding: 0 5px; line-height: 1.2; word-break: keep-all; }
+
+        /* === 상점 & 덱 리스트 === */
+        .list-container { width: 100%; flex: 1; overflow-y: auto; padding: 20px; box-sizing: border-box; }
+        .shop-item { 
+            display: flex; align-items: center; background: #333; margin-bottom: 10px; padding: 10px; 
+            border: 2px solid #000; border-radius: 8px; box-shadow: 0 4px 0 #111;
+        }
+        .buy-btn { background: #27ae60; color: white; padding: 5px 10px; border-radius: 4px; border: 2px solid #000; box-shadow: 0 3px 0 #145a32; font-size: 12px; }
+        .buy-btn:active { transform: translateY(3px); box-shadow: none; }
+
+        /* === 박물관 (결과) === */
+        #museum-screen { background: #222; }
+        .easel { 
+            width: 260px; height: 360px; /* [수정] 크기 확대 */
+            background: #5d4037; border: 6px solid #3e2723; border-radius: 10px;
+            box-shadow: 0 20px 0 rgba(0,0,0,0.5); margin-top: -50px; position: relative; z-index: 5;
+            display: flex; justify-content: center; align-items: center;
+        }
+        .easel img { width: 90%; height: 90%; object-fit: cover; border: 2px solid white; }
+        
+        .report-modal {
+            position: absolute; top: 20px; width: 80%; background: rgba(0,0,0,0.9); 
+            border: 4px solid white; padding: 20px; border-radius: 10px; text-align: center; z-index: 20;
+        }
+
+        .visitor-area { position: absolute; bottom: 10px; width: 100%; height: 100px; z-index: 10; overflow: hidden; pointer-events: none;}
+        .visitor { width: 40px; height: 40px; position: absolute; bottom: 10px; animation: walk 5s linear forwards; }
+        @keyframes walk { from { left: -50px; } to { left: 110%; } }
+
+        /* 피드백 텍스트 */
+        #float-msg { 
+            position: absolute; top: 40%; width: 100%; text-align: center; 
+            font-size: 30px; font-weight: bold; text-shadow: 3px 3px 0 #000; 
+            pointer-events: none; opacity: 0; transition: opacity 0.5s; z-index: 50;
+        }
+
+    </style>
+</head>
+<body>
+
+    <div id="main-screen" class="screen active">
+        <div style="text-align:center; margin-top:50px;">
+            <div style="font-size:80px; margin-bottom:20px;">🏛️</div>
+            <h1 class="title">우리 문화유산<br>보호하기</h1>
+            <div class="coin-box" style="justify-content:center; width: 150px; margin: 0 auto;">
+                <span>💰</span> <span id="main-gold">0</span> G
+            </div>
+        </div>
+        <div style="margin-top: 40px;">
+            <button class="menu-btn" style="background:#e74c3c;" onclick="showScreen('stage-screen')">
+                <span>⚔️ 복원 작전</span> <span>▶</span>
+            </button>
+            <button class="menu-btn" style="background:#9b59b6;" onclick="showScreen('deck-screen')">
+                <span>🃏 내 덱 보기</span> <span>≡</span>
+            </button>
+            <button class="menu-btn" style="background:#3498db;" onclick="showScreen('shop-screen')">
+                <span>🛒 상점</span> <span>💰</span>
+            </button>
+        </div>
+    </div>
+
+    <div id="stage-screen" class="screen">
+        <div class="navbar">
+            <button class="btn-back" onclick="showScreen('main-screen')">⬅ 뒤로</button>
+            <div>작전 구역</div>
+        </div>
+        <div class="list-container" id="stage-list"></div>
+    </div>
+
+    <div id="game-screen" class="screen">
+        <div id="game-area">
+            <img id="target-img" src="" onerror="this.style.display='none'; this.parentNode.style.background='#333'; this.parentNode.innerHTML='<div style=\'color:white;display:flex;justify-content:center;align-items:center;height:100%\'>이미지 로딩 실패</div>'">
+            
+            <div class="status-bar">
+                <div class="stat-box">
+                    <div style="color:#f1c40f">✨ 복원도 <span id="txt-restore">0%</span></div>
+                    <div class="progress"><div id="bar-restore" class="fill" style="background:#f1c40f; width:0%"></div></div>
+                </div>
+                <div class="stat-box">
+                    <div style="color:#e74c3c">❤️ 내구도 <span id="txt-hp">100</span></div>
+                    <div class="progress"><div id="bar-hp" class="fill" style="background:#e74c3c; width:100%"></div></div>
+                </div>
+            </div>
+
+            <div id="crisis-alert">
+                <h3 style="margin:0; font-size:24px;">⚠️ <span id="crisis-name">경고</span></h3>
+                <p style="margin:5px 0; color:#ddd;" id="crisis-desc">내용</p>
+                <div class="progress" style="background:#500; height:15px;"><div id="bar-crisis" class="fill" style="background:#f00; width:100%"></div></div>
+                <div style="font-size:12px; margin-top:5px;">남은 피해량: <span id="crisis-hp">0</span></div>
+            </div>
+
+            <div id="float-msg"></div>
+        </div>
+
+        <div id="ui-panel">
+            <div class="control-row">
+                <div class="energy-badge">⚡<span id="txt-energy">3</span></div>
+                <button class="turn-btn" onclick="endTurn()">턴 종료 ▶</button>
+            </div>
+            <div id="hand-area">
+                </div>
+        </div>
+    </div>
+
+    <div id="shop-screen" class="screen">
+        <div class="navbar">
+            <button class="btn-back" onclick="showScreen('main-screen')">⬅</button>
+            <div class="coin-box">💰 <span id="shop-gold">0</span></div>
+        </div>
+        <div class="list-container" id="shop-list"></div>
+    </div>
+
+    <div id="deck-screen" class="screen">
+        <div class="navbar"><button class="btn-back" onclick="showScreen('main-screen')">⬅</button><div>내 덱</div></div>
+        <div class="list-container" style="display:grid; grid-template-columns:repeat(3,1fr); gap:10px;" id="deck-list"></div>
+    </div>
+
+    <div id="museum-screen" class="screen">
+        <div class="museum-stage">
+            <div class="report-modal">
+                <h2 style="color:#f1c40f; margin:0;">🎉 복원 완료!</h2>
+                <p id="result-txt" style="color:#ccc;">설명</p>
+                <h3 style="color:#2ecc71;">수익: +<span id="result-gold">0</span> G</h3>
+                <button class="btn-back" style="width:100%; margin-top:10px; justify-content:center;" onclick="showScreen('main-screen')">메인으로</button>
+            </div>
+            <div class="easel">
+                <img id="result-img" src="">
+            </div>
+            <div class="visitor-area" id="visitor-lane"></div>
+        </div>
+    </div>
+
+<script>
+    // === 1. SVG 아이콘 데이터 (깨지지 않는 도트 이미지) ===
+    // 이 문자열들이 실제 이미지 역할을 합니다. 절대 깨지지 않습니다.
+    const SVG_ICONS = {
+        broom: `data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%232ecc71"><path d="M19.07 4.93L17.66 3.52C17.27 3.13 16.64 3.13 16.25 3.52L10.59 9.18L14.82 13.41L20.48 7.75C20.87 7.36 20.87 6.73 20.48 6.34L19.07 4.93ZM4.03 13.49L3 21L10.51 19.97L13.41 14.82L9.18 10.59L4.03 13.49Z"/></svg>`,
+        hammer: `data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23e74c3c"><path d="M19.7 13.01L21.12 14.43C21.51 14.82 21.51 15.45 21.12 15.84L15.47 21.49C15.08 21.88 14.45 21.88 14.06 21.49L12.65 20.08L2.05 9.48L9.48 2.05L19.7 12.27V13.01ZM14.77 15.84L18.3 12.3L11.7 5.69L8.16 9.23L14.77 15.84Z"/></svg>`,
+        shield: `data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%233498db"><path d="M12 1L3 5V11C3 16.55 6.84 21.74 12 23C17.16 21.74 21 16.55 21 11V5L12 1ZM12 11.99H7V10.99H17V11.99H12Z"/></svg>`,
+        water: `data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%233498db"><path d="M12 22C16.42 22 20 18.42 20 14C20 10.5 16.5 6 12 1C7.5 6 4 10.5 4 14C4 18.42 7.58 22 12 22Z"/></svg>`,
+        book: `data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%239b59b6"><path d="M18 2H6C4.9 2 4 2.9 4 4V20C4 21.1 4.9 22 6 22H18C19.1 22 20 21.1 20 20V4C20 2.9 19.1 2 18 2ZM6 4H11V12L8.5 10.5L6 12V4Z"/></svg>`,
+        trash: `data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%237f8c8d"><path d="M19 6.41L17.59 5L12 10.59L6.41 5L5 6.41L10.59 12L5 17.59L6.41 19L12 13.41L17.59 19L19 17.59L13.41 12L19 6.41Z"/></svg>`,
+        visitor: `data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23ecf0f1"><circle cx="12" cy="6" r="4"/><path d="M12 14C7.33 14 4 15.79 4 18V20H20V18C20 15.79 16.67 14 12 14Z"/></svg>`
+    };
+
+    // === 2. 카드 & 스테이지 데이터 ===
+    const CARD_DB = {
+        // 기본
+        c1: { name: "먼지 털기", cost: 1, val: 10, type: "restore", icon: SVG_ICONS.broom, desc: "기본 복원 +10" },
+        c2: { name: "정밀 보수", cost: 1, val: 15, type: "restore", icon: SVG_ICONS.hammer, desc: "복원 +15" },
+        c3: { name: "석재 보강", cost: 2, val: 0, type: "defend", icon: SVG_ICONS.shield, desc: "내구도 +20" },
+        c4: { name: "배수 작업", cost: 2, val: 30, type: "attack", icon: SVG_ICONS.water, desc: "위기 피해 30" },
+        // [추가된 카드]
+        n1: { name: "고증 연구", cost: 1, val: 0, type: "util", icon: SVG_ICONS.book, desc: "카드 2장 뽑기", effect:"draw" },
+        n2: { name: "자재 재활용", cost: 0, val: 0, type: "util", icon: SVG_ICONS.broom, desc: "에너지 +1", effect:"energy" },
+        n3: { name: "임시 가림막", cost: 1, val: 0, type: "defend", icon: SVG_ICONS.shield, desc: "방어+10, 위기방어+5", effect:"shield_plus" },
+        n4: { name: "부실 공사", cost: 1, val: 40, type: "restore", icon: SVG_ICONS.hammer, desc: "복원+40, 내구도-10", effect:"risk" },
+        // 꽝/도박
+        t1: { name: "실수", cost: 0, val: 0, type: "trash", icon: SVG_ICONS.trash, desc: "복원 -5 ~ +5", effect:"gamble" },
+        t2: { name: "부러진 도구", cost: 0, val: 0, type: "trash", icon: SVG_ICONS.trash, desc: "아무 효과 없음" }
+    };
+
+    // [이미지 문제 해결] 위키미디어 실제 주소 사용
+    const STAGE_DB = [
+        { id: 0, name: "안양 만안교", img: "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d6/Manan_bridge.JPG/640px-Manan_bridge.JPG", diff: "쉬움" },
+        { id: 1, name: "중초사지 당간지주", img: "https://upload.wikimedia.org/wikipedia/commons/thumb/8/86/Flagpole_Supports_at_Jungcho-sa_Site_in_Anyang_03.jpg/360px-Flagpole_Supports_at_Jungcho-sa_Site_in_Anyang_03.jpg", diff: "보통" },
+        { id: 2, name: "안양사 귀부", img: "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f6/Stele_Base_at_Anyang-sa_Temple.JPG/360px-Stele_Base_at_Anyang-sa_Temple.JPG", diff: "어려움" }
+    ];
+
+    const CRISIS_DB = [
+        { name: "대홍수", hp: 40, dmg: 15, reward: "내구도 +20" },
+        { name: "관람객 난동", hp: 30, dmg: 10, reward: "골드 +50" },
+        { name: "폭설", hp: 50, dmg: 20, reward: "복원도 +15%" },
+        { name: "흰개미 습격", hp: 35, dmg: 12, reward: "에너지 +2" }
+    ];
+
+    // === 3. 게임 상태 ===
+    let gameData = JSON.parse(localStorage.getItem('anyangV7')) || { gold: 500, myDeck: ['c1','c1','c2','c3','t1','n2'], collection: [] };
+    let energy=3, maxEnergy=3, restore=0, durability=100, turn=1, crisis=null;
+    let currentStage = 0; let tempDef = 0;
+
+    function saveData() { localStorage.setItem('anyangV7', JSON.stringify(gameData)); updateUI(); }
+
+    // === 4. 화면 전환 및 UI ===
+    function showScreen(id) {
+        document.querySelectorAll('.screen').forEach(el => el.classList.remove('active'));
+        document.getElementById(id).classList.add('active');
+        if(id === 'stage-screen') renderStages();
+        if(id === 'shop-screen') renderShop();
+        if(id === 'deck-screen') renderDeck();
+        if(id === 'collection-screen') renderCollection();
+        updateUI();
+    }
+
+    function updateUI() {
+        document.querySelectorAll('#main-gold, #shop-gold').forEach(el => el.innerText = gameData.gold);
+    }
+
+    // === 5. 스테이지 렌더링 ===
+    function renderStages() {
+        const list = document.getElementById('stage-list'); list.innerHTML = "";
+        STAGE_DB.forEach(s => {
+            list.innerHTML += `
+            <div class="stage-card" onclick="startGame(${s.id})" style="margin-bottom:10px;">
+                <div class="stage-img-box"><img src="${s.img}"></div>
+                <div class="stage-info">
+                    <div class="stage-header">
+                        <div class="stage-title">${s.name}</div>
+                        <div class="stage-badge" style="background:#444;color:white;padding:2px 5px;font-size:10px;">${s.diff}</div>
+                    </div>
+                    <div class="stage-desc" style="font-size:12px;color:#aaa;">터치하여 작전 시작</div>
+                </div>
+            </div>`;
+        });
+    }
+
+    // === 6. 게임 로직 ===
+    function startGame(sid) {
+        currentStage = sid;
+        const info = STAGE_DB.find(s => s.id === sid);
+        energy = 3; restore = 0; durability = 100; turn = 1; crisis = null; tempDef = 0;
+        
+        document.getElementById('target-img').src = info.img;
+        document.getElementById('target-img').style.filter = "grayscale(100%) pixelate(4px)";
+        document.getElementById('crisis-alert').style.display = "none";
+        
+        showScreen('game-screen'); startTurn();
+    }
+
+    function startTurn() {
+        energy = 3; tempDef = 0;
+        renderGameStatus(); drawCards(); 
+        if(turn > 1 && !crisis && Math.random() < 0.4) spawnCrisis();
+        floatMsg(`Turn ${turn}`, "#fff");
+    }
+
+    function endTurn() {
+        let dmg = 5; // 기본 풍화
+        if(crisis) { dmg = crisis.dmg; floatMsg("위기 피해!", "red"); }
+        durability -= Math.max(0, dmg - tempDef);
+        turn++;
+        if(checkGameOver()) return;
+        renderGameStatus(); setTimeout(startTurn, 1000);
+    }
+
+    function drawCards() {
+        const hand = document.getElementById('hand-area'); hand.innerHTML = "";
+        for(let i=0; i<4; i++) {
+            if(hand.children.length >= 6) break;
+            let cid = gameData.myDeck[Math.floor(Math.random() * gameData.myDeck.length)];
+            let card = CARD_DB[cid];
+            let el = document.createElement('div'); el.className = "card";
+            el.innerHTML = `<div class="card-cost">${card.cost}</div><div class="card-img" style="background-image:url('${card.icon}');background-size:contain;background-repeat:no-repeat;background-position:center;"></div><div class="card-title">${card.name}</div><div class="card-desc">${card.desc}</div>`;
+            el.onclick = () => playCard(card, el);
+            hand.appendChild(el);
+        }
+    }
+
+    function playCard(c, el) {
+        if(energy < c.cost) { floatMsg("에너지 부족!", "red"); return; }
+        energy -= c.cost;
+
+        // 효과 처리
+        if(c.effect === 'energy') energy++;
+        if(c.effect === 'draw') { setTimeout(drawCards, 200); } // 추가 드로우 아님, 그냥 리필식으로 구현
+        if(c.effect === 'risk') durability -= 10;
+        if(c.effect === 'shield_plus') { durability += 10; tempDef += 5; }
+        if(c.effect === 'gamble') {
+            let r = Math.floor(Math.random()*11)-5;
+            if(r>0) restore+=r; else durability+=r;
+            floatMsg(r>0?"성공!":"실수..", r>0?"lime":"red");
+        }
+
+        if(crisis) {
+            let dmg = c.val * (c.type==='attack'?2:1);
+            if(dmg > 0) {
+                crisis.hp -= dmg; floatMsg(`위기 타격 -${dmg}`, "orange");
+                if(crisis.hp <= 0) { floatMsg(`위기 해결! ${crisis.reward}`, "lime"); crisis = null; }
+                updateCrisisUI();
+            }
+        } else {
+            if(c.type === 'restore') { restore += c.val; floatMsg(`복원 +${c.val}`, "lime"); }
+            if(c.type === 'defend') { durability += 20; floatMsg("방어 +20", "cyan"); }
+        }
+
+        if(restore>100) restore=100; if(durability>100) durability=100;
+        el.style.opacity = 0; setTimeout(() => el.remove(), 200);
+        renderGameStatus();
+        if(!checkGameOver() && restore >= 100) gameWin();
+    }
+
+    function spawnCrisis() {
+        const d = CRISIS_DB[Math.floor(Math.random()*CRISIS_DB.length)];
+        crisis = {...d, maxHp:d.hp};
+        document.getElementById('crisis-name').innerText = d.name;
+        document.getElementById('crisis-desc').innerText = "방해 요소를 제거하세요!";
+        document.getElementById('crisis-alert').style.display = "block";
+        updateCrisisUI();
+    }
+    function updateCrisisUI() {
+        if(!crisis) { document.getElementById('crisis-alert').style.display="none"; return; }
+        document.getElementById('bar-crisis').style.width = (crisis.hp/crisis.maxHp)*100+"%";
+        document.getElementById('crisis-hp').innerText = crisis.hp;
+    }
+
+    function renderGameStatus() {
+        document.getElementById('txt-energy').innerText = energy;
+        document.getElementById('txt-restore').innerText = restore + "%";
+        document.getElementById('bar-restore').style.width = restore + "%";
+        document.getElementById('txt-hp').innerText = durability;
+        document.getElementById('bar-hp').style.width = durability + "%";
+        
+        let g = 100 - restore;
+        document.getElementById('target-img').style.filter = `grayscale(${g}%) pixelate(${Math.max(1, Math.floor(g/10))}px)`;
+    }
+
+    function checkGameOver() {
+        if(durability <= 0) { alert("유물이 파괴되었습니다..."); showScreen('main-screen'); return true; }
+        return false;
+    }
+
+    function floatMsg(txt, color) {
+        const el = document.getElementById('float-msg');
+        el.innerText = txt; el.style.color = color; el.style.opacity = 1; el.style.top = "40%";
+        setTimeout(() => { el.style.opacity = 0; el.style.top = "30%"; }, 800);
+    }
+
+    // === 7. 결과 및 기타 ===
+    function gameWin() {
+        showScreen('museum-screen');
+        const info = STAGE_DB.find(s => s.id === currentStage);
+        document.getElementById('result-img').src = info.img;
+        
+        let income = 300 + Math.floor(durability * 2);
+        document.getElementById('museum-income').innerText = income;
+        document.getElementById('result-txt').innerText = `남은 내구도 ${durability} / 턴 ${turn}`;
+        
+        gameData.gold += income;
+        gameData.collection.push({name:info.name, img:info.img});
+        saveData();
+
+        const lane = document.getElementById('visitor-lane'); lane.innerHTML = "";
+        for(let i=0; i<15; i++) {
+            setTimeout(() => {
+                let v = document.createElement('img'); v.className = 'visitor'; v.src = SVG_ICONS.visitor;
+                v.style.animationDuration = (3+Math.random()*3)+"s";
+                lane.appendChild(v);
+            }, i*300);
+        }
+    }
+
+    function renderShop() {
+        const list = document.getElementById('shop-list'); list.innerHTML = "";
+        const shopCards = ['n1', 'n2', 'n3', 'n4', 'n5', 'c5'];
+        shopCards.forEach(cid => {
+            const c = CARD_DB[cid];
+            list.innerHTML += `<div class="shop-item"><div style="flex:1"><div style="color:#f1c40f">${c.name}</div><div style="font-size:12px;color:#aaa;">${c.desc}</div></div><button class="buy-btn" onclick="buyCard('${cid}', 200)">200G</button></div>`;
+        });
+    }
+    function buyCard(cid, p) {
+        if(gameData.gold >= p) { gameData.gold -= p; gameData.myDeck.push(cid); alert("구매 완료!"); saveData(); renderShop(); }
+        else alert("골드가 부족합니다.");
+    }
+
+    function renderDeck() {
+        const list = document.getElementById('deck-list'); list.innerHTML = "";
+        gameData.myDeck.forEach(cid => {
+            const c = CARD_DB[cid];
+            list.innerHTML += `<div class="card"><div class="card-cost">${c.cost}</div><div class="card-img" style="background-image:url('${c.icon}');background-size:contain;background-repeat:no-repeat;background-position:center;"></div><div class="card-title">${c.name}</div></div>`;
+        });
+    }
+
+    function renderCollection() {
+        const grid = document.getElementById('collection-grid'); grid.innerHTML = "";
+        if(gameData.collection.length === 0) grid.innerHTML = "<div style='grid-column:span 3;text-align:center;color:#777'>수집된 유물이 없습니다.</div>";
+        [...gameData.collection].reverse().forEach(i => {
+            grid.innerHTML += `<div style="background:#333;padding:10px;border-radius:8px;"><img src="${i.img}" style="width:100%;height:80px;object-fit:cover;border:2px solid #000;"><div style="text-align:center;font-size:12px;margin-top:5px;">${i.name}</div></div>`;
+        });
+    }
+
+    updateUI();
+</script>
+</body>
+</html>

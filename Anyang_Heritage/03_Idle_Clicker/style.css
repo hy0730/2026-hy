@@ -1,0 +1,435 @@
+@charset "utf-8";
+
+/* ==========================================================================
+   [안양 유물 복원실 : 디자인 시스템 (Retro Palette)]
+   ========================================================================== */
+:root {
+    /* [배경 및 구조] */
+    --retro-bg-dark: #2d241f;   /* 어두운 갈색 (박물관 벽) */
+    --retro-bg-light: #fdfcf8;  /* 밝은 종이색 */
+    --retro-panel: #3e2723;     /* 패널 배경 */
+    --retro-border: #1a1a1a;    /* 외곽선 */
+    
+    /* [포인트 컬러] */
+    --color-gold: #ffca28;      /* 재화, 강조 */
+    --color-cyan: #4dd0e1;      /* 에너지, 과학 */
+    --color-red: #ef5350;       /* 경고, 내구도 */
+    --color-green: #9ccc65;     /* 성공, 회복 */
+    --color-glass: rgba(255, 255, 255, 0.15); /* 유리 질감 */
+
+    /* [폰트] */
+    --font-pixel: 'DungGeunMo', sans-serif;
+    --font-ui: 'Noto Sans KR', sans-serif;
+
+    /* [UI 효과 변수] */
+    --shadow-depth: 4px 4px 0 rgba(0,0,0,0.3);
+    --shadow-float: 0 10px 20px rgba(0,0,0,0.5);
+    --glow-gold: 0 0 10px rgba(255, 202, 40, 0.5);
+}
+
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+body {
+    margin: 0; padding: 0;
+    background-color: #121212;
+    font-family: var(--font-pixel);
+    display: flex; justify-content: center; 
+    height: 100vh; height: 100dvh; 
+    overflow: hidden;
+    color: #d7ccc8;
+    user-select: none; /* 드래그 방지 */
+}
+
+/* ==========================================================================
+   [1] 앱 컨테이너 & 글로벌 효과
+   ========================================================================== */
+#app-container {
+    width: 100%; max-width: 480px; height: 100%;
+    background-color: var(--retro-bg-dark);
+    position: relative; display: flex; flex-direction: column;
+    border-left: 4px solid #1a1a1a;
+    border-right: 4px solid #1a1a1a;
+    box-shadow: 0 0 50px rgba(0,0,0,0.8);
+    overflow: hidden;
+}
+
+/* CRT 스캔라인 효과 (화면이 일렁이는 느낌) */
+.scanline {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    background: linear-gradient(to bottom, 
+        rgba(255,255,255,0), 
+        rgba(255,255,255,0) 50%, 
+        rgba(0,0,0,0.02) 50%, 
+        rgba(0,0,0,0.02));
+    background-size: 100% 4px;
+    pointer-events: none; z-index: 900;
+    animation: scanMove 60s linear infinite;
+}
+@keyframes scanMove { from { background-position: 0 0; } to { background-position: 0 100%; } }
+
+/* 비네팅 (가장자리 어둡게) */
+.vignette {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    background: radial-gradient(circle, transparent 50%, rgba(0,0,0,0.6) 100%);
+    pointer-events: none; z-index: 899;
+}
+
+/* ==========================================================================
+   [2] 상단 상태바 (Header)
+   ========================================================================== */
+.top-status-bar {
+    background: rgba(30, 20, 15, 0.95);
+    border-bottom: 2px solid #000;
+    padding: 8px 12px;
+    display: flex; justify-content: space-between; align-items: center;
+    z-index: 100; backdrop-filter: blur(5px);
+}
+
+/* 레벨 & 경험치 */
+.level-group { display: flex; flex-direction: column; width: 35%; gap: 2px; }
+.level-badge { font-size: 12px; color: var(--color-gold); font-weight: bold; text-shadow: 1px 1px 0 #000; }
+.exp-track {
+    width: 100%; height: 6px; background: #000;
+    border: 1px solid #444; border-radius: 3px; overflow: hidden;
+}
+.exp-fill {
+    height: 100%; background: linear-gradient(90deg, #66bb6a, #a5d6a7);
+    width: 0%; transition: width 0.5s ease-out;
+}
+
+/* 자원 알약 디자인 */
+.resource-group { display: flex; gap: 8px; align-items: center; }
+.res-pill {
+    background: rgba(0,0,0,0.6);
+    border: 1px solid #555; border-radius: 12px;
+    padding: 4px 10px; font-size: 11px;
+    display: flex; align-items: center; gap: 6px;
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.5);
+}
+.res-pill i { font-size: 12px; }
+.res-pill.energy i { color: var(--color-cyan); filter: drop-shadow(0 0 2px var(--color-cyan)); }
+.res-pill.gold i { color: var(--color-gold); filter: drop-shadow(0 0 2px var(--color-gold)); }
+
+.income-tag {
+    background: var(--color-green); color: #000;
+    padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: bold;
+    box-shadow: 0 0 5px var(--color-green);
+}
+
+/* ==========================================================================
+   [3] 메인 뷰포트 & 탭 (Views)
+   ========================================================================== */
+#main-viewport {
+    flex: 1; position: relative; overflow: hidden;
+    background: #222;
+}
+.view-section {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    display: none; flex-direction: column;
+    opacity: 0; transition: opacity 0.3s ease;
+}
+.view-section.active { display: flex; opacity: 1; z-index: 10; }
+
+/* ------------------------------------------------------------------
+   [VIEW 1: 지도 (Map)]
+   ------------------------------------------------------------------ */
+.map-wrapper {
+    flex: 1; position: relative; overflow: hidden;
+    background: #2c3e50; cursor: grab;
+}
+.map-wrapper:active { cursor: grabbing; }
+
+.bg-map {
+    width: 100%; height: 100%; object-fit: cover;
+    filter: sepia(0.3) contrast(1.1); /* 고지도 느낌 */
+}
+
+/* 랜드마크 핀 */
+.landmark-pin {
+    position: absolute; width: 44px; height: 44px;
+    transform: translate(-50%, -100%);
+    z-index: 5; cursor: pointer;
+    transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+.landmark-pin:hover { transform: translate(-50%, -115%) scale(1.1); z-index: 20; }
+.landmark-pin img { 
+    width: 100%; height: 100%; object-fit: contain; 
+    filter: drop-shadow(0 4px 2px rgba(0,0,0,0.6));
+}
+.landmark-pin .label {
+    position: absolute; bottom: -18px; left: 50%; transform: translateX(-50%);
+    background: rgba(0,0,0,0.8); color: #fff; padding: 2px 6px;
+    border-radius: 4px; font-size: 10px; white-space: nowrap;
+    border: 1px solid var(--color-gold);
+}
+
+.map-ui-overlay {
+    position: absolute; top: 10px; width: 100%;
+    display: flex; justify-content: center; pointer-events: none;
+}
+.info-bubble {
+    background: rgba(255, 255, 255, 0.9); color: #333;
+    padding: 6px 15px; border-radius: 20px; font-size: 12px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+    display: flex; align-items: center; gap: 5px;
+    border: 2px solid var(--retro-panel);
+}
+
+/* ------------------------------------------------------------------
+   [VIEW 2: 박물관 (Museum)] - 분위기 깡패
+   ------------------------------------------------------------------ */
+.museum-interior {
+    flex: 1; position: relative;
+    background: #1a120b url('../images/bg_pattern.png'); /* 패턴 가정 */
+    display: flex; flex-direction: column; justify-content: flex-end;
+    overflow: hidden;
+}
+
+/* 조명 효과 (God Rays) */
+.spotlight {
+    position: absolute; top: -50%; left: -50%; width: 200%; height: 200%;
+    background: radial-gradient(circle at 50% 50%, rgba(255, 200, 100, 0.1) 0%, transparent 60%);
+    pointer-events: none; animation: breatheLight 5s infinite alternate;
+}
+@keyframes breatheLight { from { opacity: 0.5; } to { opacity: 0.8; } }
+
+/* 전시대 레일 (스크롤) */
+.exhibition-rail {
+    width: 100%; padding: 20px 0;
+    overflow-x: auto; overflow-y: hidden;
+    z-index: 10;
+    background: linear-gradient(to top, rgba(0,0,0,0.8) 0%, transparent 100%);
+}
+.exhibition-slots {
+    display: flex; padding: 0 20px; gap: 15px;
+    min-width: max-content;
+}
+
+/* 슬롯 (유리관 디자인) */
+.slot {
+    width: 80px; height: 110px;
+    background: #3e2723;
+    border: 2px solid #5d4037;
+    border-radius: 6px 6px 2px 2px;
+    position: relative; flex-shrink: 0;
+    box-shadow: 0 10px 15px rgba(0,0,0,0.5);
+    display: flex; justify-content: center; align-items: flex-end;
+}
+.slot-inner {
+    width: 100%; height: 100%;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+}
+/* 유리 질감 오버레이 */
+.slot::after {
+    content: ''; position: absolute; top: 2px; left: 2px; right: 2px; height: 50%;
+    background: linear-gradient(135deg, rgba(255,255,255,0.2) 0%, transparent 60%);
+    border-radius: 4px; pointer-events: none;
+}
+.slot.empty { opacity: 0.5; border-style: dashed; }
+.slot.locked { background: #1a1a1a; border-color: #333; color: #555; }
+
+.museum-dashboard {
+    position: absolute; top: 15px; left: 15px; right: 15px;
+    background: rgba(255, 255, 255, 0.95);
+    border: 3px solid var(--retro-panel); border-radius: 8px;
+    padding: 10px; z-index: 20;
+    box-shadow: var(--shadow-depth);
+}
+.dash-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; }
+.dash-row.sub { font-size: 11px; color: #666; margin-bottom: 0; }
+.museum-title { font-weight: bold; color: var(--retro-panel); font-size: 14px; }
+.btn-manage {
+    background: var(--retro-panel); color: #fff; border: none;
+    padding: 2px 8px; border-radius: 4px; font-family: inherit; font-size: 10px;
+    cursor: pointer;
+}
+
+/* ------------------------------------------------------------------
+   [VIEW 3: 작업대 (Workshop)]
+   ------------------------------------------------------------------ */
+#view-workshop { background: #3e2723; }
+
+.workshop-toolbar {
+    background: #2d241f; padding: 10px 15px;
+    display: flex; justify-content: space-between; align-items: center;
+    border-bottom: 2px solid #1a1a1a;
+}
+.tool-actions { display: flex; gap: 8px; }
+.btn-action {
+    width: 30px; height: 30px; border-radius: 4px; border: 1px solid #5d4037;
+    background: #4e342e; color: #d7ccc8; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+}
+.btn-action:active { transform: translateY(2px); }
+.btn-action.danger { background: #b71c1c; border-color: #ef5350; color: #fff; }
+
+.grid-container {
+    flex: 1; display: flex; align-items: center; justify-content: center;
+    padding: 15px; background-image: radial-gradient(#4e342e 10%, transparent 10%);
+    background-size: 20px 20px;
+}
+
+.merge-grid {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    grid-template-rows: repeat(6, 1fr);
+    gap: 4px;
+    width: 100%; max-width: 360px; aspect-ratio: 1;
+    background: #281e19; border: 4px solid #1a1a1a;
+    padding: 4px; border-radius: 4px;
+    box-shadow: inset 0 0 20px rgba(0,0,0,0.8);
+}
+
+.grid-cell {
+    background: #362822; border-radius: 2px;
+    position: relative;
+}
+.item {
+    width: 100%; height: 100%;
+    display: flex; align-items: center; justify-content: center;
+    cursor: grab; transition: transform 0.1s;
+}
+.item img { 
+    width: 90%; height: 90%; object-fit: contain; 
+    filter: drop-shadow(1px 1px 1px rgba(0,0,0,0.5));
+}
+.item:active { cursor: grabbing; transform: scale(1.15); z-index: 100; }
+.item.dragging { opacity: 0.5; }
+
+.workshop-footer {
+    padding: 10px; text-align: center; background: #2d241f;
+    border-top: 1px solid #1a1a1a; font-size: 11px; color: #8d6e63;
+}
+
+/* ==========================================================================
+   [4] 하단 내비게이션 (Tabs)
+   ========================================================================== */
+.bottom-tab-nav {
+    background: #2a1a15;
+    border-top: 4px solid #1a1a1a;
+    display: flex; height: 60px;
+    z-index: 100; box-shadow: 0 -4px 10px rgba(0,0,0,0.3);
+}
+
+.tab-btn {
+    flex: 1; background: none; border: none;
+    color: #8d6e63;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    font-family: inherit; font-size: 10px; gap: 4px;
+    cursor: pointer; position: relative;
+    transition: all 0.2s;
+}
+.tab-btn i { font-size: 18px; margin-bottom: 2px; transition: transform 0.2s; }
+.tab-btn.active { color: var(--color-gold); background: rgba(255, 202, 40, 0.05); }
+.tab-btn.active i { transform: translateY(-4px); color: var(--color-gold); filter: drop-shadow(0 0 5px var(--color-gold)); }
+.tab-btn.highlight { color: #ffab91; } /* 발굴 버튼 강조 */
+
+/* ==========================================================================
+   [5] 모달 및 복원 미니게임 (특수효과 집중)
+   ========================================================================== */
+.modal-overlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.85); backdrop-filter: blur(4px);
+    z-index: 2000; display: flex; align-items: center; justify-content: center;
+}
+.hidden { display: none !important; }
+
+.modal-window {
+    width: 90%; max-width: 340px;
+    background: var(--retro-bg-light);
+    border: 4px solid var(--retro-panel); border-radius: 8px;
+    display: flex; flex-direction: column; overflow: hidden;
+    animation: popup 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    box-shadow: 0 20px 50px rgba(0,0,0,0.8);
+}
+@keyframes popup { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+.modal-header {
+    background: var(--retro-panel); color: #fff;
+    padding: 12px 15px; display: flex; justify-content: space-between; align-items: center;
+}
+.btn-close { background: none; border: none; color: #fff; font-size: 18px; cursor: pointer; }
+
+/* [복원 게임] */
+.restore-window { background: #2d241f; color: #d7ccc8; }
+
+.canvas-wrapper {
+    padding: 20px; background: radial-gradient(#3e2723, #1a1a1a);
+    display: flex; flex-direction: column; align-items: center; gap: 15px;
+}
+.relic-display {
+    width: 200px; height: 200px; position: relative;
+    background: #000; border: 4px solid #5d4037; border-radius: 8px;
+    box-shadow: 0 0 20px rgba(0,0,0,0.7);
+}
+.base-img, #scrub-canvas {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    object-fit: contain;
+}
+#scrub-canvas { z-index: 10; cursor: crosshair; touch-action: none; }
+
+/* 내구도 바 (Heartbeat) */
+.durability-bar {
+    width: 80%; display: flex; align-items: center; gap: 8px; color: var(--color-red);
+}
+.pulse-icon { animation: pulse 1s infinite; }
+.bar-track { flex: 1; height: 8px; background: #111; border: 1px solid #444; border-radius: 4px; overflow: hidden; }
+.bar-fill { height: 100%; background: var(--color-red); transition: width 0.2s; }
+
+/* 도구 선택 바 */
+.tool-selector {
+    background: #3e2723; padding: 15px;
+    display: flex; justify-content: center; gap: 10px;
+    border-top: 2px solid #5d4037;
+}
+.tool-btn {
+    background: #4e342e; border: 2px solid #5d4037; color: #a1887f;
+    border-radius: 6px; padding: 5px; width: 60px;
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+    cursor: pointer; transition: all 0.2s;
+}
+.tool-btn .icon-box { 
+    width: 32px; height: 32px; background: rgba(0,0,0,0.3); border-radius: 4px; 
+    display: flex; align-items: center; justify-content: center; font-size: 20px;
+}
+.tool-btn img { width: 24px; height: 24px; object-fit: contain; }
+.tool-btn span { font-size: 10px; }
+
+/* 도구 활성화 효과 */
+.tool-btn.active {
+    background: #5d4037; border-color: var(--color-gold); color: #fff;
+    transform: translateY(-5px); box-shadow: 0 5px 10px rgba(0,0,0,0.5);
+}
+.tool-btn.active .icon-box { background: rgba(255, 202, 40, 0.1); }
+
+.restore-status {
+    padding: 10px; text-align: center; background: #fff; color: #333;
+}
+.percent { font-size: 16px; font-weight: bold; color: var(--retro-panel); }
+
+/* ==========================================================================
+   [6] 기타 유틸 (토스트, 방문객)
+   ========================================================================== */
+.visitor-layer {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    pointer-events: none; z-index: 5;
+}
+.visitor-char {
+    position: absolute; width: 40px; height: 60px;
+    background-size: contain; background-repeat: no-repeat; background-position: center;
+    bottom: 20px; pointer-events: auto; cursor: pointer;
+    transition: transform 0.1s;
+}
+.visitor-char:active { transform: scale(0.9); }
+
+/* 토스트 메시지 */
+#toast-msg {
+    position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%) translateY(20px);
+    background: rgba(0,0,0,0.9); color: #fff;
+    padding: 8px 16px; border-radius: 20px; font-size: 12px;
+    border: 1px solid var(--color-gold);
+    opacity: 0; transition: all 0.3s; pointer-events: none; z-index: 3000;
+}
+#toast-msg.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+@keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.2); } 100% { transform: scale(1); } }

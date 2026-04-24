@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>현장 조사 : 문화유산의 기억을 복원하라!</title>
+    <link href="https://fonts.googleapis.com/css2?family=DungGeunMo&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div id="app-container">
+        <div class="scanline"></div>
+        
+        <div class="hud-header">
+            <div class="header-left">
+                <div class="icon-box">🔎</div>
+                <span class="header-title">현장 조사 진행 중</span>
+            </div>
+            <div class="header-right">
+                <button class="btn-exit" onclick="location.href='../index.html'">연구원 복귀</button>
+            </div>
+        </div>
+
+        <div class="vn-stage">
+            <div id="scene-bg" class="scene-bg"></div>
+        </div>
+
+        <div class="dialogue-area" onclick="nextScript()">
+            <div class="portrait-box">
+                <img id="dialogue-portrait" src="" alt="캐릭터" class="hidden">
+            </div>
+
+            <div class="dialogue-content">
+                <div class="name-badge" id="char-name">???</div>
+                <div class="text-box">
+                    <p id="dialogue-text"></p>
+                    <span class="cursor-blink">▼</span>
+                </div>
+            </div>
+        </div>
+
+        <div id="choice-overlay" class="overlay hidden">
+            <div class="choice-box">
+                <h3>[ 행동을 선택하세요 ]</h3>
+                <div id="choice-container" class="choice-grid">
+                    </div>
+            </div>
+        </div>
+
+        <div id="result-overlay" class="overlay hidden">
+            <div class="result-card">
+                <h2 id="result-title">조사 완료!</h2>
+                <div class="result-img-box">
+                    <img id="result-img" src="" alt="유물 사진">
+                </div>
+                <p id="result-desc" class="result-text">기록을 확보했습니다.</p>
+                <div class="reward-box">
+                    <span>획득 보상:</span>
+                    <span id="reward-item" class="highlight"></span>
+                </div>
+                <button class="btn-confirm" onclick="finishGame()">다음 문화유산으로 이동</button>
+            </div>
+        </div>
+
+        <div id="ending-overlay" class="overlay hidden">
+            <div class="certificate-card">
+                <div class="cert-header">
+                    <span class="cert-title">한양문화유산연구원</span>
+                    <span class="cert-sub">Hanyang Heritage Institute</span>
+                </div>
+                <hr class="cert-line">
+                <div class="cert-body">
+                    <div class="cert-photo-area">
+                        <img src="../images/han_2.png" alt="증명사진" id="cert-photo">
+                    </div>
+                    <div class="cert-info">
+                        <div class="info-row">
+                            <span class="label">성명:</span>
+                            <span class="value" id="cert-name">연구원</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="label">소속:</span>
+                            <span class="value">현장 조사팀</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="label">평가:</span>
+                            <span class="value score" id="cert-score">0/8</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="cert-grade-box">
+                    <span class="grade-label">최종 등급</span>
+                    <h1 class="grade-text" id="cert-grade">A</h1>
+                </div>
+                <div class="cert-footer">
+                    <p>위 사람을 안양시 정식 조사대원으로 임명함.</p>
+                    <button class="btn-confirm" onclick="exitToMain()">발급 완료</button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script src="../data.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>

@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>한양문화유산연구원 : 통합 시스템</title>
+    <link href="https://fonts.googleapis.com/css2?family=DungGeunMo&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --retro-bg: #8d6e63;
+            --retro-box: #fdfcf8;
+            --retro-border: #3e2723;
+            --retro-green: #7c9a3d;
+            --retro-red: #d32f2f;
+            --retro-blue: #30346d;
+            --retro-gold: #fbc02d;
+        }
+
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+        body {
+            margin: 0; padding: 0;
+            background-color: #222;
+            font-family: 'DungGeunMo', sans-serif;
+            display: flex; justify-content: center; 
+            height: 100vh; height: 100dvh; 
+            overflow: hidden;
+        }
+
+        #app-container {
+            width: 100%; max-width: 480px; height: 100%;
+            background-color: var(--retro-box);
+            position: relative; display: flex; flex-direction: column;
+            border-left: 4px solid var(--retro-border);
+            border-right: 4px solid var(--retro-border);
+            overflow: hidden;
+        }
+
+        /* 배경 지도 애니메이션 */
+        .bg-animate {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background-image: url('images/map.png');
+            background-size: 150%; 
+            background-position: center;
+            opacity: 0.15; z-index: 0;
+            animation: panMap 60s linear infinite;
+        }
+
+        .scanline {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,0) 50%, rgba(0,0,0,0.05) 50%, rgba(0,0,0,0.05));
+            background-size: 100% 4px;
+            pointer-events: none; z-index: 900;
+        }
+
+        img { image-rendering: pixelated; }
+
+        /* ------------------------------------------------------------------
+           [1] 인트로 & 로그인
+           ------------------------------------------------------------------ */
+        #intro-layer {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.9); z-index: 2000;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            padding: 20px;
+        }
+
+        .intro-logo { width: 60%; max-width: 250px; margin-bottom: 30px; animation: bounce 2s infinite; }
+        
+        .dialogue-box {
+            width: 95%; max-width: 400px;
+            background: #fff; 
+            border: 4px solid var(--retro-border); border-radius: 10px;
+            padding: 35px 20px 20px; margin-bottom: 20px;
+            color: var(--retro-border); position: relative;
+            box-shadow: 0 10px 0 rgba(0,0,0,0.3);
+        }
+        
+        .char-icon {
+            width: 80px; height: 80px; 
+            border: 4px solid var(--retro-border); border-radius: 50%; 
+            background: #fff; position: absolute; top: -40px; left: 20px; overflow: hidden;
+            box-shadow: 0 4px 0 rgba(0,0,0,0.2);
+        }
+        .char-icon img { width: 100%; height: 100%; object-fit: cover; }
+
+        .dialogue-name {
+            position: absolute; top: -15px; left: 110px;
+            background: var(--retro-green); color: #fff; padding: 6px 15px;
+            border: 2px solid var(--retro-border); border-radius: 20px;
+            font-size: 14px; box-shadow: 2px 2px 0 rgba(0,0,0,0.2);
+        }
+
+        .dialogue-text { 
+            margin-top: 15px; font-size: 18px; line-height: 1.6; min-height: 70px; 
+            word-break: keep-all; white-space: pre-wrap; letter-spacing: -0.5px;
+        }
+
+        .btn-next {
+            position: absolute; bottom: 10px; right: 15px;
+            background: transparent; border: none; font-family: 'DungGeunMo';
+            font-size: 24px; color: var(--retro-green);
+            animation: blink 1s infinite; cursor: pointer;
+        }
+
+        #name-form {
+            display: none; width: 100%; flex-direction: column; align-items: center;
+            margin-top: 20px; animation: fadeIn 0.5s;
+        }
+        .input-retro {
+            width: 80%; padding: 12px; font-family: 'DungGeunMo'; font-size: 16px;
+            background: #fff; border: 4px solid var(--retro-border); text-align: center;
+            margin-bottom: 15px; outline: none; color: var(--retro-border);
+            border-radius: 8px; box-shadow: inset 2px 2px 5px rgba(0,0,0,0.1);
+        }
+        .btn-retro {
+            background: var(--retro-green); color: #fff; 
+            border: 4px solid var(--retro-border); border-radius: 8px;
+            padding: 12px 30px; font-size: 16px; font-family: 'DungGeunMo'; cursor: pointer;
+            box-shadow: 0 6px 0 rgba(0,0,0,0.3); transition: transform 0.1s;
+        }
+        .btn-retro:active { transform: translateY(6px); box-shadow: none; }
+
+        /* ------------------------------------------------------------------
+           [2] 메인 대시보드
+           ------------------------------------------------------------------ */
+        #dashboard { display: none; flex-direction: column; height: 100%; position: relative; z-index: 10; }
+
+        .notice-bar {
+            background: var(--retro-blue); color: #fff;
+            padding: 8px 0; font-size: 13px; border-bottom: 4px solid var(--retro-border);
+            white-space: nowrap; overflow: hidden; box-shadow: 0 4px 0 rgba(0,0,0,0.2); flex-shrink: 0;
+        }
+        .notice-content { display: inline-block; padding-left: 100%; animation: marquee 15s linear infinite; }
+
+        .dash-header {
+            background: rgba(253, 252, 248, 0.9); 
+            border-bottom: 4px solid var(--retro-border);
+            padding: 15px 20px; display: flex; justify-content: space-between; align-items: center;
+            flex-shrink: 0;
+        }
+        .header-logo-box { display: flex; align-items: center; }
+        .mini-logo { height: 40px; filter: drop-shadow(2px 2px 0 rgba(0,0,0,0.2)); }
+        .header-title {
+            font-size: 18px; color: var(--retro-border); margin-left: 10px;
+            font-weight: bold; text-shadow: 2px 2px 0 rgba(0,0,0,0.1);
+        }
+        .user-tag { 
+            background: var(--retro-border); color: #fff; padding: 6px 12px; 
+            border-radius: 8px; font-size: 13px; box-shadow: 2px 2px 0 rgba(0,0,0,0.3);
+            white-space: nowrap;
+        }
+
+        .menu-grid {
+            flex: 1; padding: 20px; display: flex; flex-direction: column; gap: 15px;
+            overflow-y: auto; z-index: 10;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .menu-item {
+            display: flex; align-items: center; padding: 15px;
+            background: #fff; border: 4px solid var(--retro-border);
+            box-shadow: 6px 6px 0 rgba(0,0,0,0.15);
+            text-decoration: none; color: var(--retro-border); position: relative;
+            border-radius: 12px; transition: transform 0.1s;
+            min-height: 80px;
+        }
+        .menu-item:hover:not(.locked) { transform: translate(-2px, -2px); box-shadow: 8px 8px 0 rgba(0,0,0,0.15); }
+        .menu-item:active:not(.locked) { transform: translate(4px, 4px); box-shadow: 2px 2px 0 rgba(0,0,0,0.15); }
+        
+        /* 잠금 상태 스타일 (이제 사용 안함, 혹시 몰라 유지) */
+        .menu-item.locked {
+            filter: grayscale(100%); opacity: 0.7; pointer-events: none;
+            background: #e0e0e0;
+        }
+        .menu-item.locked::after {
+            content: '🔒 선행 임무 필요';
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            background: rgba(0,0,0,0.8); color: #fff; padding: 5px 10px;
+            border-radius: 5px; font-size: 12px; white-space: nowrap; z-index: 5;
+        }
+
+        .badge-new {
+            position: absolute; top: -8px; right: -8px;
+            background: var(--retro-red); color: #fff; font-size: 10px;
+            padding: 4px 6px; border: 2px solid var(--retro-border); border-radius: 5px;
+            animation: bounce 1s infinite;
+        }
+
+        .menu-icon-box {
+            width: 55px; height: 55px; background: #eee; 
+            border: 3px solid var(--retro-border); margin-right: 15px;
+            display: flex; justify-content: center; align-items: center;
+            border-radius: 10px; flex-shrink: 0;
+        }
+        .menu-icon-img { width: 35px; height: 35px; object-fit: contain; }
+        .menu-text { flex: 1; }
+        .menu-text h3 { margin: 0 0 4px 0; font-size: 20px; color: var(--retro-green); }
+        .menu-text p { margin: 0; font-size: 12px; color: #666; font-weight: bold; word-break: keep-all; }
+
+        /* 하단 캐릭터 영역 수정: 균등 크기 맞춤 */
+        .footer-chars {
+            height: 160px; display: flex; justify-content: space-between; align-items: flex-end;
+            padding: 0 10px; 
+            margin-top: -20px; position: relative; flex-shrink: 0;
+            overflow: visible; 
+            pointer-events: none; 
+        }
+        .char-wrapper { 
+            position: relative; width: 45%; max-width: 150px; 
+            display: flex; justify-content: center; align-items: flex-end; /* 캐릭터 정렬 */
+        }
+        
+        .char-full { 
+            height: 130px; width: auto; max-width: 100%; /* 강제 크기 지정 */
+            object-fit: contain;
+            filter: drop-shadow(4px 4px 0 rgba(0,0,0,0.3));
+            animation: bounceChar 2s infinite ease-in-out;
+            position: relative; bottom: -10px;
+        }
+        .char-full.delay { animation-delay: 1s; }
+
+        .speech-bubble {
+            background: #fff; border: 3px solid var(--retro-border); border-radius: 10px;
+            padding: 8px 12px; font-size: 12px; color: var(--retro-border); font-weight: bold;
+            position: absolute; top: -50px; white-space: nowrap;
+            box-shadow: 4px 4px 0 rgba(0,0,0,0.1);
+            animation: popIn 3s infinite; z-index: 20;
+            max-width: 150px; white-space: normal; text-align: center;
+        }
+        /* 왼쪽 캐릭터 (한) 말풍선 */
+        #bubble-han { left: 0; }
+        #bubble-han::after { left: 20px; } 
+        #bubble-han::before { left: 20px; }
+
+        /* 오른쪽 캐릭터 (양) 말풍선 */
+        #bubble-yang { right: 0; }
+        #bubble-yang::after { left: auto; right: 20px; }
+        #bubble-yang::before { left: auto; right: 20px; }
+
+        .speech-bubble::after {
+            content: ''; position: absolute; bottom: -8px; 
+            border-width: 8px 6px 0; border-style: solid; border-color: #fff transparent; display: block; width: 0;
+        }
+        .speech-bubble::before {
+            content: ''; position: absolute; bottom: -12px; 
+            border-width: 8px 6px 0; border-style: solid; border-color: var(--retro-border) transparent; display: block; width: 0; z-index: -1;
+        }
+
+        .reset-area {
+            text-align: center; padding-bottom: 20px;
+            z-index: 30; position: relative; flex-shrink: 0;
+        }
+
+        #tutorial-overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.7); z-index: 3000; display: none;
+        }
+        .highlight-box {
+            position: absolute; border: 5px solid var(--retro-red);
+            border-radius: 10px; cursor: pointer;
+            transition: all 0.3s ease; animation: pulseRed 1.5s infinite;
+            z-index: 3001; box-shadow: 0 0 20px rgba(255, 62, 62, 0.5);
+        }
+        .tuto-text-box {
+            position: absolute; background: #fff; border: 3px solid var(--retro-red);
+            padding: 10px; border-radius: 10px; width: 200px; text-align: center;
+            font-size: 14px; color: var(--retro-border); font-weight: bold;
+            box-shadow: 5px 5px 0 rgba(0,0,0,0.3); z-index: 3002;
+        }
+
+        @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+        @keyframes bounceChar { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+        @keyframes blink { 50% { opacity: 0; } }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes popIn { 0%, 90% { opacity: 1; transform: scale(1); } 95% { opacity: 0; transform: scale(0.8); } 100% { opacity: 1; transform: scale(1); } }
+        @keyframes pulseRed { 0% { border-color: var(--retro-red); } 50% { border-color: #ffcccc; } 100% { border-color: var(--retro-red); } }
+        @keyframes marquee { 0% { transform: translateX(0); } 100% { transform: translateX(-100%); } }
+        @keyframes panMap { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
+
+        @media (max-width: 360px) {
+            .intro-logo { width: 50%; }
+            .header-title { font-size: 16px; }
+            .user-tag { font-size: 12px; padding: 4px 8px; }
+            .menu-item { padding: 12px; }
+            .menu-icon-box { width: 45px; height: 45px; margin-right: 10px; }
+            .menu-text h3 { font-size: 18px; }
+            .footer-chars { height: 140px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="app-container">
+        <div class="bg-animate"></div>
+        <div class="scanline"></div>
+        
+        <div id="intro-layer">
+            <img src="images/logo_1.png" class="intro-logo" alt="로고">
+            <div class="dialogue-box">
+                <div class="char-icon"><img id="intro-char-img" src="images/han_2.png" onerror="this.src='images/han_1.png'"></div>
+                <div id="intro-name" class="dialogue-name">한</div>
+                <div id="intro-text" class="dialogue-text"></div>
+                <button id="btn-next-msg" class="btn-next" onclick="nextMessage()">▼</button>
+            </div>
+            <div id="name-form">
+                <input type="text" id="nickname" class="input-retro" placeholder="이름 입력 (예: 김안양)" maxlength="6">
+                <button class="btn-retro" onclick="registerUser()">등록 완료</button>
+            </div>
+        </div>
+
+        <div id="dashboard">
+            <div class="notice-bar">
+                <div class="notice-content">📢 [긴급 공지] 안양시에 타임 샌드스톰 발생! 모든 연구원은 현장으로 출동하여 기록을 복구하십시오! 📢</div>
+            </div>
+
+            <div class="dash-header">
+                <div class="header-logo-box">
+                    <img src="images/logo_1.png" class="mini-logo" alt="로고">
+                    <span class="header-title">한양문화유산연구원</span>
+                </div>
+                <div class="user-tag">LV.1 <span id="display-name">---</span> 연구원</div>
+            </div>
+
+            <div class="menu-grid" id="menu-grid">
+                <a href="./01_story_Adv/index.html" id="menu-story" class="menu-item" onclick="SoundManager.playSFX('sfx_click.mp3')">
+                    <div class="menu-icon-box">
+                        <img src="images/emo_1.png" class="menu-icon-img" onerror="this.style.display='none'; this.parentElement.innerText='🔎'">
+                    </div>
+                    <div class="menu-text">
+                        <h3>현장 조사</h3>
+                        <p>사라진 문화유산의 기록을 복원하라!</p>
+                    </div>
+                </a>
+
+                <a href="./02_Card_Battle/index.html" id="menu-battle" class="menu-item" onclick="SoundManager.playSFX('sfx_click.mp3')">
+                    <div class="menu-icon-box">
+                        <img src="images/emo_2.png" class="menu-icon-img" onerror="this.style.display='none'; this.parentElement.innerText='⛏️'">
+                    </div>
+                    <div class="menu-text">
+                        <h3>발굴 작전</h3>
+                        <p>땅속 문화유산을 안전하게 구출하라!</p>
+                    </div>
+                </a>
+
+                <a href="./03_Idle_Clicker/index.html" id="menu-tycoon" class="menu-item" onclick="SoundManager.playSFX('sfx_click.mp3')">
+                    <div class="menu-icon-box">
+                        <img src="images/emo_3.png" class="menu-icon-img" onerror="this.style.display='none'; this.parentElement.innerText='🏛️'">
+                    </div>
+                    <div class="menu-text">
+                        <h3>보존 관리</h3>
+                        <p>문화유산을 후대에게 전달하라!</p>
+                    </div>
+                </a>
+            </div>
+
+            <div class="footer-chars">
+                <div class="char-wrapper">
+                    <div class="speech-bubble" id="bubble-han">어서 현장으로!</div>
+                    <img src="images/han_1.png" class="char-full" alt="한" onerror="this.src='images/han_1.png'">
+                </div>
+                <div class="char-wrapper">
+                    <div class="speech-bubble" id="bubble-yang">신입! 왔어?</div>
+                    <img src="images/yang_1.png" class="char-full delay" style="transform: scaleX(-1);" alt="양" onerror="this.src='images/yang_1.png'">
+                </div>
+            </div>
+
+            <div class="reset-area">
+                <button onclick="DataManager.resetData()" style="background:none; border:none; color:#999; font-family:'DungGeunMo'; cursor:pointer; font-size:12px; text-decoration:underline;">[시스템 초기화]</button>
+            </div>
+        </div>
+
+        <div id="tutorial-overlay" onclick="nextTutorial()">
+            <div id="tuto-box" class="highlight-box"></div>
+            <div id="tuto-text" class="tuto-text-box">여기를 눌러보세요!</div>
+        </div>
+
+    </div>
+
+    <script src="data.js"></script>
+    <script>
+        // 클리어 확인용 키 (이제 잠금 해제에는 쓰이지 않지만 기록용으로 유지)
+        const KEY_STORY_CLEAR = 'anyang_story_clear';
+        const KEY_BATTLE_CLEAR = 'anyang_battle_clear';
+
+        const scripts = [
+            { char: "한", img: "han_2.png", text: "반가워! 안양의 역사를 지키는 '한양문화유산연구원'에 온 걸 환영해!" },
+            { char: "양", img: "yang_2.png", text: "난 현장 탐사를 맡은 '양'이야! 우리는 지금 사라진 문화유산 기록을 찾고 있어." },
+            { char: "한", img: "han_2.png", text: "너의 도움이 절실히 필요해. 자, 연구원 등록증을 만들어줄게. 이름이 뭐야?" }
+        ];
+        let scriptIdx = 0;
+        let typingTimer = null;
+        let isTyping = false;
+        let currentFullText = "";
+        let tutoStep = 0;
+        const tutoData = [
+            { target: "menu-story", text: "먼저 [현장 조사]에서<br>사라진 기록을 찾아야 해!" },
+            { target: "menu-battle", text: "그 다음 [발굴 작전]으로<br>유물을 땅에서 꺼내고," },
+            { target: "menu-tycoon", text: "마지막으로 [유물 관리]에서<br>박물관을 운영하는 거야!" }
+        ];
+        const hanQuotes = ["빨리 움직이자!", "데이터 분석 중...", "역사는 흐른다...", "오늘 점심 뭐지?"];
+        const yangQuotes = ["신입! 준비됐어?", "땅 좀 파볼까?", "발굴하러 가자!", "유물아 어디 있니~"];
+
+        window.onload = function() {
+            const user = DataManager.getUser();
+            
+            // updateMenuLocks(); // 잠금 로직 삭제
+
+            if (user) {
+                showDashboard(user.nickname, user.tutorialDone);
+            } else {
+                updateDialogue();
+                document.body.addEventListener('click', () => SoundManager.playBGM('bgm_main.mp3'), { once: true });
+            }
+            setInterval(updateQuotes, 3000);
+        };
+
+        // --- 기존 함수 유지 ---
+        function updateDialogue() {
+            if (typingTimer) clearInterval(typingTimer);
+            const data = scripts[scriptIdx];
+            document.getElementById('intro-name').innerText = data.char;
+            const textBox = document.getElementById('intro-text');
+            textBox.innerText = "";
+            const nameBadge = document.getElementById('intro-name');
+            nameBadge.style.backgroundColor = (data.char === "한") ? "#7c9a3d" : "#fbc02d";
+            const imgEl = document.getElementById('intro-char-img');
+            imgEl.src = "images/" + data.img;
+            imgEl.onerror = function() { this.src = (data.char === "한") ? "images/han_1.png" : "images/yang_1.png"; };
+            currentFullText = data.text;
+            isTyping = true;
+            let i = 0;
+            typingTimer = setInterval(() => {
+                textBox.innerText += currentFullText.charAt(i++);
+                if (i >= currentFullText.length) { clearInterval(typingTimer); isTyping = false; }
+            }, 50);
+        }
+
+        function nextMessage() {
+            SoundManager.playSFX('sfx_click.mp3');
+            if (isTyping) {
+                clearInterval(typingTimer);
+                document.getElementById('intro-text').innerText = currentFullText;
+                isTyping = false;
+                return;
+            }
+            scriptIdx++;
+            if (scriptIdx < scripts.length) {
+                updateDialogue();
+            } else {
+                document.getElementById('intro-text').innerText = "이름을 입력하면 등록 완료야!";
+                document.getElementById('btn-next-msg').style.display = 'none';
+                document.getElementById('name-form').style.display = 'flex';
+            }
+        }
+
+        function registerUser() {
+            const name = document.getElementById('nickname').value.trim();
+            if (name.length < 1) { alert("이름을 입력해야 연구원이 될 수 있어!"); return; }
+            SoundManager.playSFX('sfx_clrear.mp3');
+            DataManager.saveUser(name);
+            showDashboard(name, false); 
+        }
+
+        function showDashboard(name, isTutoDone) {
+            document.getElementById('intro-layer').style.display = 'none';
+            document.getElementById('dashboard').style.display = 'flex';
+            document.getElementById('display-name').innerText = name;
+            if (!isTutoDone) setTimeout(startTutorial, 500); 
+        }
+
+        function startTutorial() {
+            document.getElementById('tutorial-overlay').style.display = 'block';
+            tutoStep = 0;
+            updateTutorial();
+        }
+
+        function updateTutorial() {
+            if (tutoStep >= tutoData.length) {
+                document.getElementById('tutorial-overlay').style.display = 'none';
+                DataManager.finishTutorial();
+                return;
+            }
+            const data = tutoData[tutoStep];
+            const targetEl = document.getElementById(data.target);
+            const box = document.getElementById('tuto-box');
+            const textBox = document.getElementById('tuto-text');
+            const container = document.getElementById('app-container');
+            const targetRect = targetEl.getBoundingClientRect();
+            const containerRect = container.getBoundingClientRect();
+            
+            box.style.top = (targetRect.top - containerRect.top) + "px";
+            box.style.left = (targetRect.left - containerRect.left) + "px";
+            box.style.width = targetRect.width + "px";
+            box.style.height = targetRect.height + "px";
+
+            textBox.innerHTML = data.text;
+            textBox.style.top = (targetRect.top - containerRect.top + 10) + "px";
+            textBox.style.left = "auto";
+            textBox.style.right = "20px"; 
+        }
+
+        function nextTutorial() {
+            SoundManager.playSFX('sfx_click.mp3');
+            tutoStep++;
+            updateTutorial();
+        }
+
+        function updateQuotes() {
+            document.getElementById('bubble-han').innerText = hanQuotes[Math.floor(Math.random() * hanQuotes.length)];
+            document.getElementById('bubble-yang').innerText = yangQuotes[Math.floor(Math.random() * yangQuotes.length)];
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>안양 헤리티지 타이쿤</title>
+    
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏛️</text></svg>">
+    <meta property="og:title" content="안양 문화유산 발굴 체험">
+    <meta property="og:description" content="설치 없이 즐기는 내 손안의 안양 역사!">
+    
+    <link href="https://unpkg.com/nes.css@2.3.0/css/nes.min.css" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=DungGeunMo&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+
+    <script>
+        document.addEventListener('contextmenu', e => { e.preventDefault(); });
+        document.onkeydown = e => {
+            if(e.keyCode == 123 || (e.ctrlKey && e.shiftKey && (e.keyCode == 73 || e.keyCode == 74)) || (e.ctrlKey && e.keyCode == 85)) return false;
+        }
+    </script>
+</head>
+<body>
+
+    <div class="tycoon-container">
+        
+        <div class="header">
+            <button class="nes-btn is-small" onclick="location.href='../index.html'">◀ 본부</button>
+            <div class="header-info">
+                <div class="money-box">
+                    <i class="nes-icon coin is-small"></i> 
+                    <span id="money-display">0</span>
+                </div>
+                <div class="grade-box">
+                    상태: <span id="grade-display" style="color:#2ecc71">최상</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="relic-stage" onclick="interactRelic()">
+            <img src="../images/relic_3.png" id="main-relic" alt="만안교" onerror="this.src='https://placehold.co/300x200/555/fff?text=No+Image'">
+            
+            <div id="layer-dirt" class="overlay-layer"></div>
+            <div id="layer-water" class="overlay-layer"></div>
+            <div id="layer-crack" class="overlay-layer"></div>
+            
+            <div id="effect-zone"></div>
+        </div>
+
+        <div class="status-panel">
+            <div class="bar-row">
+                <span class="icon">🌫️ 먼지</span>
+                <progress class="nes-progress is-warning" id="bar-dirt" value="0" max="100"></progress>
+            </div>
+            <div class="bar-row">
+                <span class="icon">💧 습기</span>
+                <progress class="nes-progress is-primary" id="bar-water" value="0" max="100"></progress>
+            </div>
+            <div class="bar-row">
+                <span class="icon">💔 파손</span>
+                <progress class="nes-progress is-error" id="bar-crack" value="0" max="100"></progress>
+            </div>
+        </div>
+
+        <div class="tool-belt">
+            <button class="nes-btn tool-btn is-primary" id="btn-brush" onclick="selectTool('brush')">
+                🧹 붓<br><span class="key-desc">먼지제거</span>
+            </button>
+            <button class="nes-btn tool-btn" id="btn-towel" onclick="selectTool('towel')">
+                🧽 수건<br><span class="key-desc">습기제거</span>
+            </button>
+            <button class="nes-btn tool-btn" id="btn-hammer" onclick="selectTool('hammer')">
+                🔨 망치<br><span class="key-desc">보수작업</span>
+            </button>
+        </div>
+
+        <div class="shop-panel">
+            <p class="shop-title">📦 비품실</p>
+            <div style="display:flex; gap:10px;">
+                <button class="nes-btn is-success shop-btn" onclick="buyUpgrade('auto_clean')">
+                    <div>🤖 자동 관리봇</div>
+                    <div class="cost">1,000원</div>
+                </button>
+                <button class="nes-btn is-warning shop-btn" onclick="buyUpgrade('better_tools')">
+                    <div>✨ 고급 도구</div>
+                    <div class="cost">500원</div>
+                </button>
+            </div>
+        </div>
+
+    </div>
+    
+    <script src="script.js"></script>
+</body>
+</html>

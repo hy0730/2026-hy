@@ -1,0 +1,858 @@
+/* =========================================================
+   [ 안양 시간 탐험 - 통합 스타일시트 (sample.css) ]
+   ========================================================= */
+
+/* 1. 웹 폰트 로드 (Pretendard) */
+@import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
+
+/* 2. 공통 컬러 변수 (Theme) */
+:root {
+    --primary: #00d2ff;
+    --primary-dark: #0088aa;
+    --bg-dark: #12121a;
+    --bg-panel: #1e1e2e;
+    --text-main: #ffffff;
+    --text-sub: #a2a2bd;
+    --locked: #3a3a50;
+}
+
+/* 3. 기본 리셋 및 모바일 터치 최적화 */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-family: 'Pretendard', sans-serif;
+    user-select: none; /* 텍스트 드래그 방지 */
+    -webkit-tap-highlight-color: transparent; /* 모바일 터치 시 파란 음영 제거 */
+}
+
+body {
+    background-color: #000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100dvh; /* 모바일 브라우저 주소창을 고려한 동적 높이 */
+    color: var(--text-main);
+    overflow: hidden;
+}
+
+/* 4. 게임 전체 컨테이너 (모바일 화면 고정) */
+#game-container {
+    width: 100%;
+    max-width: 420px;
+    height: 100%;
+    max-height: 850px;
+    background-color: var(--bg-dark);
+    position: relative;
+    box-shadow: 0 0 30px rgba(0, 210, 255, 0.1);
+    overflow: hidden;
+    z-index: 1;
+}
+
+/* 5. 공통 화면(Screen) 및 트랜지션 효과 */
+.screen {
+    display: none;
+    width: 100%;
+    height: 100%;
+    padding: 25px 20px;
+    flex-direction: column;
+    opacity: 0;
+    transition: opacity 0.3s ease-in-out;
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 2;
+}
+.screen.active {
+    display: flex;
+    opacity: 1;
+}
+
+/* 6. 공통 UI 요소 (버튼, 미션 타이틀, 타이머) */
+.btn {
+    padding: 12px 20px;
+    background-color: transparent;
+    color: #ff6b6b;
+    border: 1px solid #ff6b6b;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: bold;
+    cursor: pointer;
+    margin-top: auto;
+    transition: 0.2s;
+}
+.btn:active {
+    background-color: #ff6b6b;
+    color: #fff;
+}
+
+.mission-title {
+    font-size: 24px;
+    color: #ffda79;
+    margin-bottom: 8px;
+    text-align: center;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+}
+
+.mission-desc {
+    font-size: 14px;
+    margin-bottom: 25px;
+    color: #ccc;
+    text-align: center;
+    word-break: keep-all;
+    line-height: 1.4;
+}
+
+/* 글로벌 타임어택 바 */
+.timer-container {
+    width: 100%;
+    height: 8px;
+    background-color: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+    margin-bottom: 20px;
+    overflow: hidden;
+    display: none;
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.5);
+}
+.timer-bar {
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, #ff4757, #ff6b81);
+    transition: width 0.1s linear;
+}
+.timer-container.active {
+    display: block;
+}
+
+/* =========================================================
+   모달 및 팝업 (수첩, 환경설정, 해설, AR)
+   ========================================================= */
+.modal-overlay {
+    display: none;
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.85);
+    z-index: 100;
+    justify-content: center;
+    align-items: center;
+    opacity: 0;
+    transition: opacity 0.3s ease-in-out;
+}
+
+.modal-content {
+    background: var(--bg-panel);
+    border: 2px solid var(--primary);
+    border-radius: 15px;
+    width: 85%;
+    max-height: 80%;
+    padding: 25px;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+}
+
+/* 설정 창 커스텀 슬라이더 */
+#settings-modal input[type="range"] {
+    -webkit-appearance: none;
+    width: 100%;
+    height: 6px;
+    background: #4a4a6a;
+    border-radius: 3px;
+    outline: none;
+    margin-top: 10px;
+}
+#settings-modal input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: var(--primary);
+    cursor: pointer;
+    box-shadow: 0 0 8px rgba(0, 210, 255, 0.5);
+}
+
+
+/* =========================================================
+   [화면별 상세 스타일]
+   ========================================================= */
+
+/* --- [1] 허브(로비) 화면 --- */
+#hub-screen {
+    background: radial-gradient(circle at top, #23233a, var(--bg-dark));
+    align-items: center;
+}
+
+/* 상단 메뉴 버튼 (수첩, 설정, AR) */
+.hub-top-menu button {
+    transition: transform 0.2s;
+}
+.hub-top-menu button:active {
+    transform: scale(0.85);
+}
+
+.hub-title {
+    font-size: 26px;
+    color: var(--primary);
+    margin: 20px 0 5px;
+    text-shadow: 0 0 10px rgba(0,210,255,0.4);
+}
+
+.hub-subtitle {
+    font-size: 13px;
+    color: var(--text-sub);
+    margin-bottom: 30px;
+}
+
+/* 거울(진행도) UI */
+.mirror-wrapper {
+    position: relative;
+    width: 140px;
+    height: 140px;
+    margin-bottom: 40px;
+}
+.mirror-outer {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    /* 진행도(CSS 변수 --progress)에 따라 테두리 색상이 차오름 */
+    background: conic-gradient(var(--primary) var(--progress, 0%), #2a2a40 var(--progress, 0%));
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    box-shadow: 0 0 20px rgba(0, 210, 255, 0.3);
+    transition: --progress 1s ease-in-out;
+}
+.mirror-inner { 
+    width: 125px;
+    height: 125px;
+    border-radius: 50%;
+    background: radial-gradient(circle, #32324e, #1a1a2e);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    border: 2px solid #4a4a6a;
+}
+.mirror-inner span { font-size: 20px; font-weight: 800; color: #fff; }
+.mirror-inner small { font-size: 11px; color: var(--primary); margin-top: 2px; }
+
+/* 스테이지 3x3 그리드 */
+.grid-stages {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    width: 100%;
+}
+
+.stage-btn {
+    background-color: var(--bg-panel);
+    border: 2px solid var(--locked);
+    border-radius: 12px;
+    padding: 15px 5px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 80px;
+}
+.stage-btn:active { transform: scale(0.95); }
+.stage-btn.unlocked {
+    border-color: var(--primary);
+    background-color: rgba(0, 210, 255, 0.05);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+    animation: pulse-light 2s infinite ease-in-out;
+}
+.stage-btn.locked {
+    opacity: 0.5;
+    filter: grayscale(100%);
+}
+.stage-num { font-size: 14px; font-weight: 900; margin-bottom: 4px; }
+.stage-name { font-size: 11px; color: #ddd; word-break: keep-all; line-height: 1.3;}
+.stage-btn.unlocked .stage-name { color: var(--primary); }
+
+
+/* --- [2] 스토리 모드 화면 --- */
+#story-screen {
+    /* HTML의 global-bg가 없을 때를 대비한 기본 그라데이션 */
+    background: linear-gradient(rgba(18,18,26,0.3), rgba(18,18,26,0.9));
+    justify-content: flex-end;
+    padding-bottom: 50px;
+}
+
+.naru-character {
+    width: 90px;
+    height: 90px;
+    margin-bottom: 15px;
+    background-color: #fff;
+    border-radius: 50%;
+    border: 3px solid var(--primary);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 40px;
+    box-shadow: 0 0 15px var(--primary);
+    animation: float 3s ease-in-out infinite;
+    overflow: hidden; /* 이미지가 원 밖으로 나가지 않게 */
+}
+@keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+}
+
+.dialog-box {
+    background-color: rgba(20, 20, 30, 0.95);
+    border: 2px solid var(--primary);
+    border-radius: 15px;
+    padding: 20px;
+    min-height: 140px;
+    cursor: pointer;
+    position: relative;
+    box-shadow: 0 10px 20px rgba(0,0,0,0.5);
+}
+.dialog-name {
+    display: inline-block;
+    background-color: var(--primary);
+    color: #000;
+    font-weight: 900;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 14px;
+    margin-bottom: 12px;
+    margin-top: -35px; /* 박스 위로 이름표 돌출 */
+    box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+}
+.dialog-text {
+    font-size: 16px;
+    line-height: 1.6;
+    color: #eaeaea;
+}
+.next-indicator {
+    position: absolute;
+    bottom: 12px;
+    right: 15px;
+    font-size: 12px;
+    color: var(--primary);
+    animation: pulse 1.5s infinite ease-in-out;
+}
+
+
+/* --- [3] 미니게임 A: 클리커 (터치 연타/문지르기) --- */
+#clicker-screen {
+    background-color: rgba(18, 18, 26, 0.85);
+    align-items: center;
+    justify-content: center;
+}
+
+.click-target {
+    width: 180px;
+    height: 180px;
+    background: radial-gradient(circle, #3a3a50, #1e1e2e);
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 60px;
+    cursor: pointer;
+    border: 4px dashed #ffda79;
+    margin-bottom: 40px;
+    box-shadow: 0 0 30px rgba(255, 218, 121, 0.2);
+    transition: transform 0.05s;
+    position: relative;
+    overflow: hidden;
+}
+.click-target:active {
+    transform: scale(0.9);
+    background: radial-gradient(circle, #4a4a60, #2e2e3e);
+    border-style: solid;
+}
+
+/* 클리커 프로그레스 바 */
+.progress-wrapper { width: 85%; text-align: left; }
+.progress-label {
+    font-size: 12px;
+    color: var(--primary);
+    margin-bottom: 8px;
+    font-weight: bold;
+    display: flex;
+    justify-content: space-between;
+}
+.progress-bar {
+    width: 100%;
+    height: 24px;
+    background-color: rgba(0,0,0,0.5);
+    border-radius: 12px;
+    overflow: hidden;
+    border: 2px solid #555;
+    position: relative;
+}
+.progress-fill {
+    width: 0%;
+    height: 100%;
+    background: linear-gradient(90deg, var(--primary-dark), var(--primary));
+    transition: width 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+
+/* --- [4] 미니게임 B: 퀴즈/선택지 --- */
+#quiz-screen {
+    background-color: rgba(18, 18, 26, 0.85);
+    justify-content: center;
+    align-items: center;
+}
+
+.quiz-question-box {
+    background-color: var(--bg-panel);
+    border: 2px solid var(--primary);
+    border-radius: 12px;
+    padding: 20px;
+    width: 90%;
+    margin-bottom: 30px;
+    text-align: center;
+    font-size: 16px;
+    line-height: 1.5;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+}
+
+.quiz-options {
+    width: 90%;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.quiz-btn {
+    background-color: #2a2a40;
+    border: 2px solid #4a4a6a;
+    color: white;
+    padding: 16px;
+    border-radius: 10px;
+    font-size: 15px;
+    cursor: pointer;
+    transition: 0.2s;
+    word-break: keep-all;
+    text-align: center;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+}
+.quiz-btn:active { transform: scale(0.95); }
+.quiz-btn.correct { background-color: #27ae60; border-color: #2ecc71; }
+.quiz-btn.wrong { background-color: #c0392b; border-color: #e74c3c; }
+
+
+/* --- [5] 미니게임 C: 순서 맞추기 퍼즐 --- */
+#sequence-screen {
+    background-color: rgba(18, 18, 26, 0.85);
+    align-items: center;
+    justify-content: flex-start;
+    padding-top: 40px;
+}
+
+/* 정답이 꽂힐 슬롯 */
+.seq-slots {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    width: 100%;
+    margin-bottom: 30px;
+}
+.seq-slot {
+    height: 50px;
+    background-color: rgba(255,255,255,0.05);
+    border: 2px dashed #555;
+    border-radius: 8px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: #777;
+    font-size: 14px;
+    transition: 0.3s;
+}
+.seq-slot.filled {
+    background-color: rgba(0,210,255,0.1);
+    border: 2px solid var(--primary);
+    color: var(--primary);
+    font-weight: bold;
+}
+
+/* 유저가 누를 조각들 */
+.seq-items {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: center;
+    width: 100%;
+}
+.seq-item {
+    background-color: #2a2a40;
+    border: 2px solid #4a4a6a;
+    padding: 15px;
+    border-radius: 10px;
+    cursor: pointer;
+    flex: 1 1 calc(50% - 10px);
+    text-align: center;
+    font-size: 14px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+    transition: 0.2s;
+}
+.seq-item:active { transform: scale(0.95); }
+.seq-item.hidden {
+    opacity: 0;
+    pointer-events: none;
+    transform: scale(0.8);
+}
+
+/* 드래그 앤 드롭 애니메이션 */
+.seq-slot.drag-over {
+    background-color: rgba(0, 210, 255, 0.2);
+    border: 2px solid var(--primary);
+    transform: scale(1.05);
+}
+.seq-item.dragging {
+    opacity: 0.4;
+    border: 2px dashed var(--primary);
+}
+.seq-item.dragging-touch {
+    opacity: 0.8;
+    transform: scale(1.1);
+    border: 2px solid var(--primary);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.5);
+}
+.seq-slot.highlight {
+    background-color: rgba(0, 210, 255, 0.2);
+    border: 2px dashed var(--primary);
+}
+
+
+/* --- [6] 미니게임 D: 숨은그림찾기 --- */
+#hidden-screen {
+    background-color: rgba(18, 18, 26, 0.85);
+    justify-content: center;
+    align-items: center;
+}
+
+
+/* --- [7] 미니게임 E: 슬라이더 (가마 온도 맞추기) --- */
+#slider-screen {
+    background-color: rgba(18, 18, 26, 0.85);
+    align-items: center;
+    justify-content: center;
+}
+.slider-wrapper {
+    position: relative;
+    width: 80%;
+    max-width: 300px;
+    margin-bottom: 20px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+}
+.slider {
+    -webkit-appearance: none;
+    width: 100%;
+    height: 10px;
+    background: #4a4a6a;
+    outline: none;
+    border-radius: 5px;
+    position: absolute;
+    margin: 0;
+    z-index: 1;
+}
+.slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: var(--primary);
+    cursor: grab;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+    z-index: 3;
+    position: relative;
+    transition: background 0.1s ease-in-out;
+}
+.slider::-webkit-slider-thumb:active {
+    cursor: grabbing;
+    background: #00aaff;
+}
+/* 적정 온도 구역 및 현재 온도 마커 */
+.range-mark {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    height: 20px; /* 슬라이더 바보다 높게 */
+    background-color: rgba(0, 255, 0, 0.3); /* 초록색 반투명 */
+    z-index: 0; /* 슬라이더 바 아래로 */
+    border-radius: 5px;
+}
+.good-zone {
+    left: 35%;
+    width: 30%;
+    background-color: rgba(0, 255, 0, 0.2);
+    border: 1px dashed rgba(0, 255, 0, 0.5);
+    transition: left 0.3s linear, width 0.3s linear;
+}
+.current-temp-text {
+    font-size: 16px;
+    font-weight: bold;
+    color: var(--primary);
+}
+
+
+/* --- [8] 미니게임 F: 매칭 게임 (9스테이지) --- */
+#matching-screen {
+    background-color: rgba(18, 18, 26, 0.85);
+    align-items: center;
+    justify-content: flex-start;
+    padding-top: 40px;
+}
+.matching-container {
+    width: 100%;
+    flex: 1;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-around;
+    padding: 30px 0;
+}
+.matching-row {
+    display: flex;
+    justify-content: space-around;
+    width: 100%;
+    z-index: 2;
+}
+.matching-item {
+    width: 65px;
+    height: 65px;
+    background: #2a2a40;
+    border: 2px solid #4a4a6a;
+    border-radius: 50%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    transition: 0.2s;
+    position: relative;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+}
+.matching-item span {
+    font-size: 26px;
+    line-height: 1;
+}
+.matching-item small {
+    font-size: 10px;
+    color: #ddd;
+    margin-top: 2px;
+}
+.matching-item.selected {
+    border-color: var(--primary);
+    box-shadow: 0 0 15px rgba(0, 210, 255, 0.6);
+    transform: scale(1.1);
+    background: rgba(0, 210, 255, 0.1);
+}
+.matching-item.matched {
+    border-color: #27ae60;
+    background: rgba(39, 174, 96, 0.2);
+    cursor: default;
+    box-shadow: none;
+    opacity: 0.8;
+}
+#matching-canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1;
+    pointer-events: none;
+}
+
+
+/* --- [9] 프롤로그 및 엔딩 화면 --- */
+.prologue-text-box {
+    margin-top: 30px;
+    font-size: 18px;
+    color: #fff;
+    text-align: center;
+    line-height: 1.6;
+    word-break: keep-all;
+    min-height: 3em;
+    text-shadow: 0 0 10px rgba(255,255,255,0.3);
+}
+
+#ending-screen {
+    background: radial-gradient(circle, #2a2a40, #000);
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    overflow: hidden;
+}
+.shining-light {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.2) 0%, transparent 70%);
+    animation: rotateLight 10s infinite linear;
+    z-index: -1;
+}
+@keyframes rotateLight {
+    from { transform: rotate(0deg) scale(1); }
+    50% { transform: rotate(180deg) scale(1.5); }
+    to { transform: rotate(360deg) scale(1); }
+}
+.restored-mirror {
+    width: 220px;
+    height: 220px;
+    margin-bottom: 30px;
+    filter: drop-shadow(0 0 20px #00d2ff);
+    animation: mirrorFloat 4s ease-in-out infinite;
+}
+@keyframes mirrorFloat {
+    0%, 100% { transform: translateY(0) rotate(0); }
+    50% { transform: translateY(-15px) rotate(5deg); }
+}
+.ending-title {
+    font-size: 22px;
+    color: #ffda79;
+    margin-bottom: 20px;
+    text-shadow: 0 0 15px rgba(255, 218, 121, 0.5);
+    line-height: 1.5;
+    word-break: keep-all;
+}
+.credits-container {
+    position: absolute;
+    bottom: -600px;
+    width: 100%;
+    padding: 0 20px;
+    color: #ccc;
+    font-size: 14px;
+    line-height: 2.5;
+    animation: scrollCredits 25s linear forwards;
+    animation-delay: 3s;
+}
+@keyframes scrollCredits {
+    from { bottom: -600px; }
+    to { bottom: 100%; }
+}
+.credit-item { margin-bottom: 10px; }
+.credit-label { color: var(--primary); font-weight: bold; margin-right: 8px; }
+
+
+/* =========================================================
+   [ 공통 애니메이션 및 이펙트 ]
+   ========================================================= */
+
+@keyframes pulse {
+    0% { transform: scale(1); opacity: 0.8; }
+    50% { transform: scale(1.1); opacity: 1; }
+    100% { transform: scale(1); opacity: 0.8; }
+}
+
+@keyframes pulse-light {
+    0% { transform: scale(1); box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
+    50% { transform: scale(1.02); box-shadow: 0 0 15px rgba(0, 210, 255, 0.2); }
+    100% { transform: scale(1); box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
+}
+
+.shake {
+    animation: shake 0.4s cubic-bezier(.36,.07,.19,.97) both;
+}
+@keyframes shake {
+    10%, 90% { transform: translate3d(-2px, 0, 0); }
+    20%, 80% { transform: translate3d(4px, 0, 0); background-color: rgba(255,0,0,0.2); }
+    30%, 50%, 70% { transform: translate3d(-6px, 0, 0); }
+    40%, 60% { transform: translate3d(6px, 0, 0); }
+}
+
+.particle {
+    position: absolute;
+    color: #ffda79;
+    font-weight: 900;
+    font-size: 24px;
+    pointer-events: none;
+    animation: floatUp 0.8s ease-out forwards;
+    z-index: 100;
+    text-shadow: 0 2px 5px #000;
+}
+@keyframes floatUp {
+    0% { transform: translateY(0) scale(1); opacity: 1; }
+    100% { transform: translateY(-60px) scale(1.5); opacity: 0; }
+}
+
+@keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0; }
+}
+
+/* 화면 가장자리 번쩍임 효과 */
+.flash-border {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    border: 8px solid rgba(255, 255, 255, 0.8);
+    pointer-events: none;
+    z-index: 999;
+    opacity: 0;
+    box-sizing: border-box;
+}
+.flash-active {
+    animation: flashAnim 0.2s ease-out;
+}
+@keyframes flashAnim {
+    0% { opacity: 0; }
+    50% { opacity: 1; }
+    100% { opacity: 0; }
+}
+
+/* [신규] 타임어택 경고 테두리 (5초 이하) */
+.time-warning-border {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    border: 8px solid rgba(255, 0, 0, 0);
+    pointer-events: none;
+    z-index: 998;
+    box-sizing: border-box;
+    transition: border-color 0.3s;
+}
+.time-warning-active {
+    animation: timeWarningPulse 1s infinite;
+}
+@keyframes timeWarningPulse {
+    0% { border-color: rgba(255, 0, 0, 0.1); background: rgba(255, 0, 0, 0.05); }
+    50% { border-color: rgba(255, 0, 0, 0.6); background: rgba(255, 0, 0, 0.15); }
+    100% { border-color: rgba(255, 0, 0, 0.1); background: rgba(255, 0, 0, 0.05); }
+}
+
+/* 시각적 안내 텍스트 (가이드 오버레이) */
+.guide-overlay {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: rgba(0, 0, 0, 0.6);
+    color: #fff;
+    padding: 15px 30px;
+    border-radius: 30px;
+    font-size: 18px;
+    font-weight: bold;
+    z-index: 1000;
+    pointer-events: none;
+    white-space: nowrap;
+    border: 2px solid var(--primary);
+    box-shadow: 0 0 20px rgba(0, 210, 255, 0.4);
+    animation: guideFadeOut 2s forwards ease-in;
+}
+@keyframes guideFadeOut {
+    0% { opacity: 0; transform: translate(-50%, -40%); }
+    15% { opacity: 1; transform: translate(-50%, -50%); }
+    70% { opacity: 1; transform: translate(-50%, -50%); }
+    100% { opacity: 0; transform: translate(-50%, -70%); }
+}

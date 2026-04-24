@@ -1,0 +1,795 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Heritage: The Grand Museum</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=DungGeunMo&display=swap');
+        
+        * { box-sizing: border-box; user-select: none; -webkit-tap-highlight-color: transparent; }
+        body { 
+            background-color: #202020; color: #333; font-family: 'DungGeunMo', sans-serif;
+            margin: 0; height: 100vh; overflow: hidden; display: flex; flex-direction: column;
+            image-rendering: pixelated;
+        }
+        button { cursor: pointer; border: none; font-family: inherit; outline: none; }
+
+        /* === UI 스타일 === */
+        .poke-border {
+            background: #fff; border: 4px solid #555; border-radius: 8px 8px 8px 0;
+            box-shadow: 4px 4px 0 #222; padding: 10px; position: relative;
+        }
+        .screen { display: none; width: 100%; height: 100%; flex-direction: column; align-items: center; position: absolute; top:0; left:0; background: #f8f8f8; z-index: 1; overflow: hidden; }
+        .active { display: flex; z-index: 10; }
+
+        /* 인트로 */
+        #intro-screen { background: #70c080; justify-content: center; text-align: center; }
+        .title-logo { font-size: 40px; color: #ffde00; text-shadow: 4px 4px 0 #3b4cca, -2px -2px 0 #cc0000; margin-bottom: 50px; line-height: 1.2; letter-spacing: -2px; }
+        .press-start { font-size: 18px; color: #222; animation: blink 1s infinite; margin-top: 50px; }
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+
+        /* 메인 및 공통 */
+        .navbar { width: 100%; padding: 15px; background: #cc0000; color:white; border-bottom: 4px solid #8b0000; display: flex; justify-content: space-between; align-items: center; flex: none; }
+        .btn-back { background: #fff; color: #333; padding: 5px 10px; border: 2px solid #333; font-weight:bold;}
+        .menu-btn { width: 90%; max-width: 350px; padding: 15px; margin: 8px; background: #fff; border: 3px solid #333; font-size: 18px; display: flex; justify-content: space-between; box-shadow: 4px 4px 0 #aaa; color: #333; }
+        .list-container { width: 100%; flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 15px; align-items: center; }
+
+        /* 전투 화면 */
+        #game-screen { background: #f8f9fa; }
+        #battle-field { position: relative; width: 100%; height: 55%; background: #a8e6cf; border-bottom: 4px solid #333; overflow: hidden; }
+        #battle-bg-deco { position: absolute; bottom: 0; width: 100%; height: 60px; background: #88c070; border-top: 4px solid #557d45; }
+        
+        #opponent-status { position: absolute; top: 20px; left: 20px; width: 180px; height: 75px; z-index: 5; }
+        #player-status { position: absolute; bottom: 30px; right: 20px; width: 180px; height: 75px; z-index: 5; }
+        
+        .hp-container { background: #555; height: 12px; width: 100%; border-radius: 6px; border: 2px solid #222; margin-top: 5px; position: relative; }
+        .hp-fill { height: 100%; border-radius: 4px; transition: width 0.5s; border-right: 2px solid rgba(255,255,255,0.5); }
+        .status-text { font-size: 12px; font-weight: bold; display: flex; justify-content: space-between; margin-bottom: 2px;}
+
+        #ui-panel { width: 100%; height: 45%; background: #222; display: flex; flex-direction: column; padding: 10px; gap: 10px; }
+        #message-box { width: 100%; height: 60px; background: #fff; border: 4px solid #666; border-radius: 5px; padding: 10px; font-size: 14px; display: flex; align-items: center; box-shadow: inset 4px 4px 0 #ddd; }
+        #hand-scroll-view { flex: 1; width: 100%; overflow-x: auto; background: #3c5aa6; border: 4px solid #eee; border-radius: 5px; display: flex; align-items: center; padding: 0 10px; }
+        #hand-area { display: flex; gap: 10px; }
+
+        .card { width: 90px; height: 110px; background: #fff; border: 3px solid #333; border-radius: 6px; display: flex; flex-direction: column; align-items: center; justify-content: space-between; padding: 5px; cursor: pointer; flex-shrink: 0; box-shadow: 4px 4px 0 rgba(0,0,0,0.3); transition: transform 0.1s; position: relative; }
+        .card:active { transform: translate(2px, 2px); box-shadow: 2px 2px 0 rgba(0,0,0,0.3); }
+        .card-cost-badge { background: #333; color: white; border-radius: 50%; width: 20px; height: 20px; display: flex; justify-content: center; align-items: center; font-size: 10px; position: absolute; top: -5px; right: -5px; }
+        .card-icon { font-size: 30px; margin-top: 15px; }
+        .card-name { font-size: 11px; font-weight: bold; text-align: center; }
+        .card-tag { font-size: 9px; color: #fff; padding: 2px 4px; border-radius: 3px; margin-bottom: 5px; width: 100%; text-align: center; }
+        
+        .turn-btn { background: #ff5555; color: white; padding: 5px 15px; border: 2px solid white; border-radius: 4px; font-weight: bold; }
+        
+        /* 유물 효과 */
+        #target-img { position:absolute; bottom:50px; right:40px; width:100px; height:100px; z-index:2; transition: filter 0.5s; }
+        .dirt-overlay { filter: sepia(1) brightness(0.4) blur(1px); } 
+        .shaking { animation: shake 0.5s; }
+        @keyframes shake { 0% { transform: translate(1px, 1px); } 50% { transform: translate(-1px, -2px); } 100% { transform: translate(1px, -1px); } }
+
+        /* === [NEW] 박물관 스타일 === */
+        .museum-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; width: 100%; padding: 10px; }
+        .museum-item { 
+            background: #fff; border: 3px solid #d4a017; border-radius: 8px; 
+            padding: 10px; display: flex; flex-direction: column; align-items: center; 
+            box-shadow: 4px 4px 0 rgba(0,0,0,0.2); 
+        }
+        .museum-img { width: 60px; height: 60px; object-fit: contain; margin-bottom: 5px; }
+        .museum-tag { background: #222; color: #d4a017; font-size: 10px; padding: 2px 6px; border-radius: 4px; margin-top: 5px; }
+
+        /* 모달 */
+        #modal-overlay { display: none; position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.7); z-index: 200; justify-content: center; align-items: center; }
+        .modal-box { background: #fff; border: 4px solid #333; padding: 20px; width: 80%; max-width: 320px; text-align: center; box-shadow: 8px 8px 0 rgba(0,0,0,0.5); border-radius: 8px; }
+    </style>
+</head>
+<body>
+
+=== 결과 화면
+<div id="result-overlay" class="screen" style="background: rgba(0,0,0,0.85); z-index: 999; justify-content: center; align-items: center;">
+    <div id="result-box" class="poke-border" style="width: 300px; text-align: center; padding: 20px; transform: scale(0.8); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);">
+        <h1 id="res-title" style="margin: 0 0 20px 0; font-size: 32px; letter-spacing: 2px;">VICTORY</h1>
+        
+        <div style="background: #eee; border: 4px solid #333; width: 120px; height: 120px; margin: 0 auto 20px auto; display: flex; align-items: center; justify-content: center; border-radius: 8px;">
+            <img id="res-img" src="" style="width: 100px; height: 100px; object-fit: contain;">
+        </div>
+
+        <div id="res-desc" style="font-size: 14px; color: #555; margin-bottom: 20px; line-height: 1.6;">
+            보상 내용이 여기에 뜹니다.
+        </div>
+
+        <button class="turn-btn" onclick="closeResult()" style="width: 100%; font-size: 18px; padding: 10px;">확인</button>
+    </div>
+</div>
+
+
+<div id="modal-overlay">
+    <div class="modal-box">
+        <h3 id="modal-title">알림</h3>
+        <p id="modal-desc" style="margin: 15px 0; font-size:14px;"></p>
+        <div><button class="btn-back" onclick="document.getElementById('modal-overlay').style.display='none'">확인</button></div>
+    </div>
+</div>
+
+<div id="intro-screen" class="screen active" onclick="showScreen('main-screen')">
+    <div class="title-logo">POCKET<br>HERITAGE</div>
+    <div style="font-size:14px; margin-bottom:10px;">유물 구출 대작전</div>
+    <div style="font-size:60px;">🏺</div>
+    <div class="press-start">TOUCH TO START</div>
+</div>
+
+<div id="main-screen" class="screen">
+    <div class="navbar"><div>연구소</div><div>💰 <span id="main-gold">0</span></div></div>
+    <div style="flex:1; display:flex; flex-direction:column; justify-content:center; gap:10px; width:100%; align-items:center;">
+        <button class="menu-btn" onclick="showScreen('stage-screen')"><span>⚔️ 발굴 시작</span><span>▶</span></button>
+        <button class="menu-btn" onclick="showScreen('museum-screen')"><span>🏛️ 박물관 (전시)</span><span>▶</span></button>
+        <button class="menu-btn" onclick="showScreen('manage-screen')"><span>🏥 시설 관리</span><span>▶</span></button>
+        <button class="menu-btn" onclick="showScreen('shop-screen')"><span>🏪 도구 상점</span><span>▶</span></button>
+        <button class="menu-btn" onclick="showScreen('deck-screen')"><span>🎒 내 가방</span><span>▶</span></button>
+    </div>
+</div>
+
+<div id="museum-screen" class="screen">
+    <div class="navbar">
+        <button class="btn-back" onclick="showScreen('main-screen')">⬅</button>
+        <div>국립 박물관</div>
+        <button class="btn-back" onclick="collectIncome()" style="background:#ffd700; border-color:#d4a017;">💰 정산</button>
+    </div>
+    <div class="list-container">
+        <div style="width:100%; text-align:center; padding:10px; background:#eee; border-radius:5px; font-size:12px;">
+            전시된 유물들이 관람료를 벌어옵니다.<br>
+            (현재 수입: <span id="museum-income">0</span> G / 회)
+        </div>
+        <div id="museum-list" class="museum-grid">
+            </div>
+    </div>
+</div>
+
+<div id="game-screen" class="screen">
+    <div id="battle-field">
+        <div id="battle-bg-deco"></div>
+        <div id="opponent-status" class="poke-border">
+            <div class="status-text"><span id="target-name">???</span> <span>Lv.5</span></div>
+            <div class="hp-container"><div id="bar-dirt" class="hp-fill" style="width:100%; background:#d4a017;"></div></div>
+            <div class="status-text" style="margin-top:2px; font-size:10px; color:#555;">남은 흙: <span id="txt-dirt">100</span></div>
+        </div>
+        <img id="target-img" src="" style="position:absolute; bottom:50px; right:40px; width:100px; height:100px; z-index:2;" class="dirt-overlay">
+        
+        <div style="position:absolute; bottom:0; left:40px; font-size:80px; z-index:2;">🤠</div>
+        <div id="player-status" class="poke-border">
+            <div class="status-text"><span>유물 상태</span></div>
+            <div class="hp-container"><div id="bar-integrity" class="hp-fill" style="width:100%; background:#4caf50;"></div></div>
+            <div class="status-text" style="margin-top:2px;"><span id="txt-integrity">100/100</span></div>
+        </div>
+    </div>
+
+    <div id="ui-panel">
+        <div style="height:30px; display:flex; justify-content:space-between; align-items:center; color:white;">
+            <div>⚡ 에너지: <span id="txt-energy" style="color:#ffde00;">3</span> <span id="txt-buff" style="font-size:12px; color:#00f3ff; margin-left:10px;"></span></div>
+            <button class="turn-btn" onclick="endTurn()">턴 종료 ▶</button>
+        </div>
+        <div id="message-box"><span id="battle-msg">야생의 유물이 나타났다!</span></div>
+        <div id="hand-scroll-view"><div id="hand-area"></div></div>
+    </div>
+</div>
+
+<div id="stage-screen" class="screen"><div class="navbar"><button class="btn-back" onclick="showScreen('main-screen')">⬅</button><div>지역 선택</div></div><div class="list-container" id="stage-list"></div></div>
+<div id="manage-screen" class="screen"><div class="navbar"><button class="btn-back" onclick="showScreen('main-screen')">⬅</button><div>시설 관리</div></div><div class="list-container" id="manage-list"></div></div>
+<div id="shop-screen" class="screen"><div class="navbar"><button class="btn-back" onclick="showScreen('main-screen')">⬅</button><div>도구 상점</div></div><div class="list-container" id="shop-list"></div></div>
+<div id="deck-screen" class="screen"><div class="navbar"><button class="btn-back" onclick="showScreen('main-screen')">⬅</button><div>내 가방</div></div><div class="list-container" id="deck-list" style="display:grid; grid-template-columns:repeat(3,1fr); gap:10px; padding:20px;"></div></div>
+
+<script>
+    // === 1. 카드 데이터 ===
+    const CARD_DB = {
+        search_1: { name: "돋보기", cost: 1, type: "scan", icon: "🔎", color:"#3498db", desc: "다음 행동 2배", effect: "buff_next" },
+        search_2: { name: "문헌 참고", cost: 1, type: "scan", icon: "📚", color:"#3498db", desc: "카드 2장 뽑기", effect: "draw2" },
+        dig_soft: { name: "빗자루", cost: 1, type: "dig", icon: "🧹", color:"#e67e22", desc: "흙 -15", val: 15, risk: 0 },
+        dig_hard: { name: "곡괭이", cost: 2, type: "dig", icon: "⛏️", color:"#e67e22", desc: "흙 -40 (위험)", val: 40, risk: 10 },
+        fix_glue: { name: "접착제", cost: 1, type: "fix", icon: "🧪", color:"#2ecc71", desc: "복원 +20", val: 20 },
+        fix_magic: { name: "복원의 빛", cost: 2, type: "fix", icon: "✨", color:"#2ecc71", desc: "복원 +50", val: 50 },
+        util_coffee: { name: "커피 타임", cost: 0, type: "util", icon: "☕", color:"#9b59b6", desc: "에너지 +1", effect: "energy1" }
+    };
+
+    // === 2. 시설(연구) 데이터 (19종 스킬트리) ===
+    const FACILITIES = [
+        // Tier 0 (기본)
+        { id: 'hq', name: "발굴 본부", desc: "연구를 시작합니다.", cost: 0, req: null, type: 'base', icon: '⛺' },
+
+        // 🔴 A트리: 생존/내구도 (Tent -> Kitchen -> Clinic -> Gym -> Shield -> Master)
+        { id: 'a1', name: "휴식 텐트", desc: "최대 내구도 +20", cost: 300, req: 'hq', type: 'hp', icon: '⛺' },
+        { id: 'a2', name: "간이 주방", desc: "전투 시작 시 체력 +10 회복", cost: 500, req: 'a1', type: 'hp', icon: '🍳' },
+        { id: 'a3', name: "현장 진료소", desc: "턴 종료 시 풍화 데미지 -1", cost: 800, req: 'a2', type: 'hp', icon: '🩹' },
+        { id: 'a4', name: "체력 단련장", desc: "최대 내구도 +30 (총 +50)", cost: 1200, req: 'a3', type: 'hp', icon: '💪' },
+        { id: 'a5', name: "보호막 생성기", desc: "발굴 리스크(자해 데미지) 50% 감소", cost: 2000, req: 'a4', type: 'hp', icon: '🛡️' },
+        { id: 'a6', name: "불멸의 전당", desc: "내구도가 1 미만으로 떨어지지 않음 (1회 버팀)", cost: 5000, req: 'a5', type: 'hp', icon: '🏰' },
+
+        // 🟡 B트리: 경제/골드 (Store -> Bank -> Marketing -> Auction -> Invest -> Tycoon)
+        { id: 'b1', name: "자재 창고", desc: "전투 승리 보상 +10%", cost: 300, req: 'hq', type: 'gold', icon: '📦' },
+        { id: 'b2', name: "간이 은행", desc: "박물관 관람료 수입 +20%", cost: 500, req: 'b1', type: 'gold', icon: '🏦' },
+        { id: 'b3', name: "홍보 마케팅", desc: "박물관 관람료 수입 +30%", cost: 800, req: 'b2', type: 'gold', icon: '📢' },
+        { id: 'b4', name: "경매장 제휴", desc: "전투 승리 보상 +30%", cost: 1200, req: 'b3', type: 'gold', icon: '⚖️' },
+        { id: 'b5', name: "투자 전문가", desc: "상점 아이템 가격 20% 할인", cost: 2000, req: 'b4', type: 'gold', icon: '📉' },
+        { id: 'b6', name: "문화재벌", desc: "모든 골드 획득량 2배", cost: 5000, req: 'b5', type: 'gold', icon: '👑' },
+
+        // 🔵 C트리: 기술/카드 (Library -> Map -> Sensor -> Lab -> Drone -> AI)
+        { id: 'c1', name: "현장 도서관", desc: "조사(Scan) 카드 효과 +20%", cost: 300, req: 'hq', type: 'tech', icon: '📚' },
+        { id: 'c2', name: "정밀 지도", desc: "전투 시작 시 카드 +1장 뽑기", cost: 500, req: 'c1', type: 'tech', icon: '🗺️' },
+        { id: 'c3', name: "지하 탐지기", desc: "발굴(Dig) 데미지 +20%", cost: 800, req: 'c2', type: 'tech', icon: '📡' },
+        { id: 'c4', name: "복원 연구소", desc: "복원(Fix) 회복량 +20%", cost: 1200, req: 'c3', type: 'tech', icon: '🔬' },
+        { id: 'c5', name: "드론 지원", desc: "매 턴 시작 시 에너지 +1", cost: 2500, req: 'c4', type: 'tech', icon: '🚁' },
+        { id: 'c6', name: "슈퍼 AI", desc: "모든 카드 효과 +50%", cost: 5000, req: 'c5', type: 'tech', icon: '🤖' }
+    ];
+
+    const STAGE_LIST = [
+        { id:0, name:"깨진 토기", hp: 80, img:"https://placehold.co/100x100/8B4513/fff?text=Pottery" },
+        { id:1, name:"녹슨 거울", hp: 120, img:"https://placehold.co/100x100/708090/fff?text=Mirror" },
+        { id:2, name:"금관 조각", hp: 200, img:"https://placehold.co/100x100/FFD700/fff?text=Crown" }
+    ];
+
+    let gameData = { gold: 1000, myDeck: ['search_1','search_1','dig_soft','dig_soft','dig_hard','fix_glue','fix_glue','util_coffee'], museum: [], facilities: ['hq'] };
+    
+    // 배틀 변수
+    let battlePhase = 1, dirt = 100, maxDirt = 100, restoreVal = 0, integrity = 100, energy = 3, buffNext = false;
+    let currentStageId = 0;
+
+    function loadData() {
+        const saved = localStorage.getItem('relicV47');
+        if (saved) gameData = JSON.parse(saved);
+        updateUI();
+    }
+    function saveData() { localStorage.setItem('relicV47', JSON.stringify(gameData)); updateUI(); }
+    function updateUI() { document.getElementById('main-gold').innerText = gameData.gold; }
+
+    // === 유틸리티: 연구 효과 확인 ===
+    function hasFac(id) { return gameData.facilities.includes(id); }
+
+    function showScreen(id) {
+        document.querySelectorAll('.screen').forEach(el => el.classList.remove('active'));
+        document.getElementById(id).classList.add('active');
+        if(id === 'stage-screen') renderStages();
+        if(id === 'museum-screen') renderMuseum();
+        if(id === 'deck-screen') renderDeck();
+        if(id === 'shop-screen') renderShop();
+        if(id === 'manage-screen') renderManage(); // 시설 관리 렌더링
+    }
+
+    function openModal(title, text) {
+        document.getElementById('modal-overlay').style.display = 'flex';
+        document.getElementById('modal-title').innerText = title;
+        document.getElementById('modal-desc').innerText = text;
+    }
+
+    // === [수정됨] 시설 관리 (골드 표시 + 연구 트리 비공개 처리) ===
+    function renderManage() {
+        // 1. 상단바에 골드 표시 추가
+        const navbar = document.querySelector('#manage-screen .navbar');
+        if(navbar) {
+            navbar.innerHTML = `
+                <button class="btn-back" onclick="showScreen('main-screen')">⬅</button>
+                <div>시설 관리</div>
+                <div class="coin-box">💰 <span id="manage-gold">${gameData.gold}</span></div>
+            `;
+        }
+
+        const list = document.getElementById('manage-list');
+        list.innerHTML = "";
+        
+        // 데이터 분류
+        const trees = { 'base': [], 'hp': [], 'gold': [], 'tech': [] };
+        FACILITIES.forEach(f => {
+            if(trees[f.type]) trees[f.type].push(f);
+        });
+
+        // 노드 그리기 함수
+        const createNode = (f) => {
+            const owned = hasFac(f.id);
+            // 선행 연구를 가지고 있는지 확인
+            const parentOwned = !f.req || hasFac(f.req);
+
+            // [핵심 로직] "안개 시스템"
+            // 내가 이미 배웠거나(owned), 바로 직전 단계까지 배워서 해금 가능한(parentOwned) 상태만 보여줌
+            // 그 외(아직 먼 미래)는 아예 렌더링하지 않음 (return "")
+            if (!owned && !parentOwned) return ""; 
+
+            // 스타일 설정
+            const border = owned ? "4px solid #2ecc71" : "4px solid #f1c40f"; // 완료:초록, 미완료:노랑
+            const bg = owned ? "#222" : "#444";
+            const opacity = owned ? 0.6 : 1; // 완료된 건 살짝 흐리게(이미 했다는 느낌), 새 건 쨍하게
+            
+            return `
+            <div onclick="buyFacility('${f.id}')" style="
+                min-width:280px; margin:5px 5px 15px 5px; padding:15px; background:${bg}; 
+                border:${border}; border-radius:8px; opacity:${opacity};
+                display:flex; align-items:center; gap:15px; cursor:pointer; color:white;
+                box-shadow: 4px 4px 0 rgba(0,0,0,0.3); transition: transform 0.1s;
+            ">
+                <div style="font-size:30px;">${f.icon}</div>
+                <div style="flex:1;">
+                    <div style="font-weight:bold; font-size:16px; color:${owned?'#2ecc71':'#f1c40f'}">
+                        ${f.name} ${owned ? '<span style="font-size:10px;">(완료)</span>' : ''}
+                    </div>
+                    <div style="font-size:12px; color:#ccc; margin-top:4px;">${f.desc}</div>
+                </div>
+                <div style="text-align:right;">
+                    <div style="font-size:14px; font-weight:bold; color:#ffd700;">
+                        ${owned ? '✔' : f.cost + 'G'}
+                    </div>
+                    ${!owned ? '<div style="font-size:10px; color:#aaa;">구매 ▶</div>' : ''}
+                </div>
+            </div>`;
+        };
+
+        // UI 구성
+        list.innerHTML += `<div style="color:#aaa; text-align:center; font-size:12px; margin-bottom:20px;">연구를 진행하면 새로운 기술이 발견됩니다.</div>`;
+
+        // 1. 연구원 (항상 보임)
+        list.innerHTML += createNode(trees.base[0]);
+
+        // 2. 3개 트리 나열 (가로 스크롤)
+        const container = document.createElement('div');
+        container.style.cssText = "display:flex; overflow-x:auto; gap:20px; padding-bottom:20px; align-items:flex-start;";
+        
+        ['hp', 'gold', 'tech'].forEach(type => {
+            const col = document.createElement('div');
+            col.style.minWidth = "300px";
+            col.style.background = "rgba(0,0,0,0.2)"; // 트리별 배경 구분
+            col.style.borderRadius = "10px";
+            col.style.padding = "10px";
+
+            // 트리 제목
+            let title = type === 'hp' ? "🔴 발굴" : (type === 'gold' ? "🟡 교육" : "🔵 연구");
+            col.innerHTML = `<h3 style="text-align:center; color:white; border-bottom:2px solid #555; padding-bottom:10px; margin-top:0;">${title}</h3>`;
+            
+            // 연결선 느낌을 위한 화살표 처리
+            let visibleCount = 0;
+            trees[type].forEach((f) => {
+                const nodeHTML = createNode(f);
+                if (nodeHTML !== "") {
+                    if (visibleCount > 0) col.innerHTML += `<div style="text-align:center; color:#555; font-size:20px; margin:-10px 0;">⬇</div>`;
+                    col.innerHTML += nodeHTML;
+                    visibleCount++;
+                }
+            });
+
+            // 아직 해금되지 않은 연구가 더 남아있다면 '???' 표시로 호기심 자극
+            const totalCount = trees[type].length;
+            if (visibleCount < totalCount) {
+                col.innerHTML += `
+                    <div style="text-align:center; color:#555; font-size:20px; margin:-10px 0;">⬇</div>
+                    <div style="
+                        margin:5px; padding:15px; background:#333; border:2px dashed #555; 
+                        border-radius:8px; color:#777; text-align:center; font-size:14px;
+                    ">
+                        🔒 미지의 연구
+                    </div>
+                `;
+            }
+
+            container.appendChild(col);
+        });
+        
+        list.appendChild(container);
+    }
+
+    function buyFacility(id) {
+        if(hasFac(id)) return openModal("알림", "이미 완료된 연구입니다.");
+        
+        const fac = FACILITIES.find(f => f.id === id);
+        if(!fac) return;
+
+        // 선행 조건 확인
+        if(fac.req && !hasFac(fac.req)) {
+            const reqName = FACILITIES.find(f => f.id === fac.req).name;
+            return openModal("잠금", `선행 연구 [${reqName}]가 필요합니다.`);
+        }
+
+        if(gameData.gold < fac.cost) return openModal("자금 부족", "골드가 부족합니다.");
+
+        // 구매 성공
+        gameData.gold -= fac.cost;
+        gameData.facilities.push(id);
+        saveData();
+        renderManage();
+        openModal("연구 완료", `[${fac.name}] 연구가 완료되었습니다!\n효과가 즉시 적용됩니다.`);
+    }
+
+    // === 박물관 ===
+    function renderMuseum() {
+        const list = document.getElementById('museum-list'); list.innerHTML = "";
+        
+        // 연구 보너스 적용 (b2, b3, b6)
+        let multiplier = 1;
+        if(hasFac('b2')) multiplier += 0.2;
+        if(hasFac('b3')) multiplier += 0.3;
+        if(hasFac('b6')) multiplier *= 2;
+
+        const baseIncome = gameData.museum.length * 50;
+        const finalIncome = Math.floor(baseIncome * multiplier);
+        
+        document.getElementById('museum-income').innerText = finalIncome;
+
+        if(gameData.museum.length === 0) {
+            list.innerHTML = "<div style='grid-column:1/-1; text-align:center; color:#777;'>전시된 유물이 없습니다.</div>";
+            return;
+        }
+        gameData.museum.forEach(item => {
+            list.innerHTML += `<div class="museum-item"><img src="${item.img}" class="museum-img"><div>${item.name}</div><div class="museum-tag">전시 중</div></div>`;
+        });
+    }
+
+    function collectIncome() {
+        let multiplier = 1;
+        if(hasFac('b2')) multiplier += 0.2;
+        if(hasFac('b3')) multiplier += 0.3;
+        if(hasFac('b6')) multiplier *= 2;
+
+        const income = Math.floor(gameData.museum.length * 50 * multiplier);
+        if(income === 0) return openModal("알림", "수입이 없습니다.");
+        
+        gameData.gold += income;
+        openModal("정산", `관람료 ${income} G 획득!`);
+        saveData();
+    }
+
+    // === 배틀 로직 (연구 효과 적용) ===
+    function renderStages() {
+        const list = document.getElementById('stage-list'); list.innerHTML = "";
+        STAGE_LIST.forEach((s, i) => {
+            list.innerHTML += `<div class="menu-btn" onclick="startBattle(${i})"><div style="display:flex; gap:10px; align-items:center;"><img src="${s.img}" style="width:40px; border:2px solid #333;"> ${s.name}</div><div>출동 ▶</div></div>`;
+        });
+    }
+
+    function startBattle(sid) {
+        currentStageId = sid;
+        let stage = STAGE_LIST[sid];
+        document.getElementById('target-img').src = stage.img;
+        document.getElementById('target-name').innerText = "???"; 
+        document.getElementById('target-img').className = 'dirt-overlay';
+        
+        battlePhase = 1; maxDirt = stage.hp; dirt = maxDirt;
+        restoreVal = 0; 
+        
+        // [연구 효과] 최대 체력 증가 (a1, a4)
+        integrity = 100;
+        if(hasFac('a1')) integrity += 20;
+        if(hasFac('a4')) integrity += 30;
+        
+        // [연구 효과] 시작 체력 회복 (a2) -> 사실상 체력 보너스 개념으로 처리
+        if(hasFac('a2')) integrity += 10;
+
+        maxIntegrity = integrity;
+        
+        // [연구 효과] 시작 에너지 (c5: 매 턴이지만 구현상 시작 에너지 증가로 처리 가능, or 매 턴 로직 수정)
+        energy = 3; 
+        if(hasFac('c5')) energy += 1;
+
+        buffNext = false;
+        
+        drawPile = [...gameData.myDeck]; shuffle(drawPile);
+        hand = []; discardPile = [];
+        
+        // [연구 효과] 시작 드로우 (c2)
+        let drawCount = 4;
+        if(hasFac('c2')) drawCount += 1;
+
+        showScreen('game-screen');
+        startTurn(drawCount);
+    }
+
+    function shuffle(arr) { arr.sort(() => Math.random() - 0.5); }
+
+    function startTurn(overrideDraw) {
+        // [연구 효과] 매 턴 에너지 (c5)
+        energy = 3;
+        if(hasFac('c5')) energy += 1;
+
+        msg(battlePhase===1 ? "발굴 단계!" : "복원 단계!");
+        renderStatus();
+        hand = []; 
+        drawCards(overrideDraw || 4);
+    }
+
+    function drawCards(n) {
+        if(n<=0) { renderHand(); return; }
+        if(drawPile.length === 0) {
+            if(discardPile.length === 0) return;
+            drawPile = [...discardPile]; discardPile = []; shuffle(drawPile);
+        }
+        hand.push(drawPile.pop());
+        drawCards(n-1);
+    }
+
+    function renderHand() {
+        const area = document.getElementById('hand-area'); area.innerHTML = "";
+        hand.forEach((id, idx) => {
+            const c = CARD_DB[id];
+            const div = document.createElement('div');
+            div.className = 'card';
+            div.innerHTML = `<div class="card-cost-badge">${c.cost}</div><div class="card-icon">${c.icon}</div><div class="card-name">${c.name}</div><div class="card-tag" style="background:${c.color}">${c.type}</div>`;
+            div.onclick = () => playCard(idx);
+            area.appendChild(div);
+        });
+    }
+
+    function playCard(idx) {
+        const id = hand[idx]; const c = CARD_DB[id];
+        if(energy < c.cost) { msg("에너지가 부족합니다!"); return; }
+
+        energy -= c.cost;
+        let txt = "", val = c.val;
+        
+        // [연구 효과] 슈퍼 AI (c6) - 모든 효과 1.5배
+        if(hasFac('c6')) val = Math.floor(val * 1.5);
+
+        if(buffNext) { val *= 2; buffNext = false; txt = "효과 2배! "; }
+
+        // [연구 효과] 카드별 보너스
+        if(c.type === 'scan' && hasFac('c1')) val = Math.floor(val * 1.2); // 도서관
+        if(c.type === 'dig' && hasFac('c3')) val = Math.floor(val * 1.2); // 탐지기
+        if(c.type === 'fix' && hasFac('c4')) val = Math.floor(val * 1.2); // 연구소
+
+        if(c.type === 'scan') {
+            if(c.effect === 'buff_next') { buffNext = true; txt += "약점 간파!"; }
+            if(c.effect === 'draw2') { drawCards(2); txt += "추가 조사."; }
+        }
+        if(c.effect === 'energy1') energy++;
+
+        if (battlePhase === 1) {
+            if (c.type === 'dig') { 
+                dirt -= val; txt += `흙 제거 -${val}`; 
+                if(c.risk > 0) { 
+                    // [연구 효과] 보호막 (a5) - 리스크 감소
+                    let risk = c.risk;
+                    if(hasFac('a5')) risk = Math.floor(risk * 0.5);
+                    integrity -= risk; 
+                    txt += ` (내구도 -${risk})`; 
+                    shakeScreen(); 
+                }
+            } 
+            else if (c.type === 'fix') { integrity += 10; txt += "내구도만 회복됨."; }
+        }
+        else if (battlePhase === 2) {
+            if (c.type === 'dig') { integrity -= 20; txt += "실수! 유물 타격!"; shakeScreen(); }
+            else if (c.type === 'fix') { restoreVal += val; integrity += 10; txt += `복원 +${val}%`; }
+        }
+
+        if(dirt < 0) dirt = 0;
+        if(restoreVal > 100) restoreVal = 100;
+        if(integrity > maxIntegrity) integrity = maxIntegrity;
+
+        msg(txt);
+        discardPile.push(id); hand.splice(idx, 1);
+        renderStatus(); renderHand();
+        checkPhaseTransition();
+    }
+
+    function checkPhaseTransition() {
+        if (integrity <= 0) {
+            // [연구 효과] 불멸 (a6) - 생략 (구현 복잡도상 패스하거나 간단히 체크)
+            return setTimeout(() => endGame(false), 500);
+        }
+        
+        if (battlePhase === 1 && dirt <= 0) {
+            battlePhase = 2; msg("✨ 발굴 완료! 복원 작업을 시작합니다.");
+            document.getElementById('target-img').className = ''; 
+            document.getElementById('target-name').innerText = "드러난 유물";
+            renderStatus();
+        }
+        if (battlePhase === 2 && restoreVal >= 100) setTimeout(() => endGame(true), 500);
+    }
+
+    function endTurn() {
+        while(hand.length > 0) discardPile.push(hand.pop());
+        
+        let decay = 5;
+        // [연구 효과] 진료소 (a3) - 풍화 감소
+        if(hasFac('a3')) decay = Math.max(1, decay - 1);
+
+        integrity -= decay; 
+        msg(`턴 종료. 유물이 풍화됩니다 (-${decay})`);
+        
+        if(integrity <= 0) setTimeout(() => endGame(false), 1000);
+        else setTimeout(startTurn, 1000);
+    }
+
+    function renderStatus() {
+        document.getElementById('txt-energy').innerText = energy;
+        document.getElementById('txt-integrity').innerText = integrity + "/" + maxIntegrity;
+        document.getElementById('bar-integrity').style.width = (integrity / maxIntegrity * 100) + "%";
+        
+        const topBar = document.getElementById('bar-dirt');
+        const topText = document.getElementById('txt-dirt');
+        
+        if (battlePhase === 1) {
+            topBar.style.background = "#d4a017"; 
+            topBar.style.width = (dirt / maxDirt * 100) + "%";
+            topText.innerText = `남은 흙: ${dirt}`;
+        } else {
+            topBar.style.background = "#3498db"; 
+            topBar.style.width = restoreVal + "%";
+            topText.innerText = `복원 진행률: ${restoreVal}%`;
+        }
+    }
+
+    function shakeScreen() {
+        const field = document.getElementById('battle-field');
+        field.classList.remove('shaking'); void field.offsetWidth; field.classList.add('shaking');
+    }
+    function msg(text) { document.getElementById('battle-msg').innerText = text; }
+
+ // === [여기부터 복사해서 붙여넣으세요] ===
+    
+    let pendingReward = 0; // 보상 골드 임시 저장
+
+    function endGame(win) {
+        const overlay = document.getElementById('result-overlay');
+        const box = document.getElementById('result-box');
+        const title = document.getElementById('res-title');
+        const desc = document.getElementById('res-desc');
+        const img = document.getElementById('res-img');
+        
+        const stage = STAGE_LIST[currentStageId];
+        
+        // 화면 표시 (Flex로 보이게 설정)
+        overlay.style.display = 'flex';
+        // 팝업 애니메이션 (약간 커지면서 등장)
+        setTimeout(() => { box.style.transform = 'scale(1)'; }, 50);
+
+        if(win) {
+            // [승리]
+            title.innerText = "발굴 성공!";
+            title.style.color = "#f1c40f"; // 금색
+            title.style.textShadow = "3px 3px 0 #c0392b";
+            
+            img.src = stage.img; // 유물 이미지 보여줌
+            img.style.filter = "none";
+
+            // 보상 계산 (연구 효과 포함)
+            let reward = 300;
+            if(typeof hasFac === 'function') { // 연구 함수가 있다면 체크
+                if(hasFac('b1')) reward += 30; 
+                if(hasFac('b4')) reward += 90; 
+                if(hasFac('b6')) reward *= 2;
+            }
+            pendingReward = reward;
+
+            // 박물관 저장
+            gameData.museum.push({ name: stage.name, img: stage.img });
+
+            desc.innerHTML = `
+                <div style="color:#2ecc71; font-weight:bold; font-size:16px;">[${stage.name}]</div>
+                <div>박물관 전시 완료!</div>
+                <div style="margin-top:10px; font-size:12px; color:#555;">획득 보상</div>
+                <div style="font-size:24px; color:#f1c40f; font-weight:bold;">+${reward} G</div>
+            `;
+        } else {
+            // [패배]
+            title.innerText = "발굴 실패..";
+            title.style.color = "#7f8c8d"; // 회색
+            title.style.textShadow = "3px 3px 0 #2c3e50";
+
+            img.src = stage.img;
+            img.style.filter = "grayscale(1) brightness(0.5)"; // 흑백 처리
+
+            pendingReward = 50; // 위로금
+
+            desc.innerHTML = `
+                <div style="color:#c0392b; font-weight:bold;">유물이 파손되었습니다.</div>
+                <div>보존 처리에 실패했습니다.</div>
+                <div style="margin-top:15px; font-size:12px; color:#555;">위로금</div>
+                <div style="font-size:18px; color:#aaa; font-weight:bold;">+50 G</div>
+            `;
+        }
+    }
+
+    // [신규] 결과창 닫기 및 데이터 저장
+    function closeResult() {
+        // 골드 지급 및 저장
+        gameData.gold += pendingReward;
+        saveData();
+
+        // 결과창 숨기기
+        const overlay = document.getElementById('result-overlay');
+        const box = document.getElementById('result-box');
+        box.style.transform = 'scale(0.8)'; // 다시 작아지게
+        setTimeout(() => { overlay.style.display = 'none'; }, 200);
+
+        // 메인 화면으로 이동
+        showScreen('main-screen');
+    }
+
+    function renderDeck() { 
+        const list = document.getElementById('deck-list'); list.innerHTML = "";
+        gameData.myDeck.forEach(id => {
+            let c = CARD_DB[id];
+            list.innerHTML += `<div class="card" style="width:auto; height:50px; flex-direction:row; padding:10px;"><span style="font-size:20px">${c.icon}</span> <span>${c.name}</span></div>`;
+        });
+    }
+    // === [수정됨] 도구 상점 (터치버그 완벽 수정) ===
+    function renderShop() {
+        // 1. 상단바 골드 표시
+        const navbar = document.querySelector('#shop-screen .navbar');
+        if(navbar) {
+            navbar.innerHTML = `
+                <button class="btn-back" onclick="showScreen('main-screen')">⬅</button>
+                <div>도구 상점</div>
+                <div class="coin-box">💰 <span id="shop-gold">${gameData.gold}</span></div>
+            `;
+        }
+
+        const list = document.getElementById('shop-list'); 
+        list.innerHTML = "";
+        
+        // 연구 효과 적용
+        let discount = (typeof hasFac === 'function' && hasFac('b5')) ? 0.8 : 1.0;
+        let price = Math.floor(200 * discount);
+
+        // 판매 목록
+        ['search_2', 'dig_hard', 'fix_magic', 'util_coffee'].forEach(id => {
+            let c = CARD_DB[id];
+            
+            // "터치하여 정보 보기" 문구 제거됨
+            list.innerHTML += `
+            <div class="menu-btn" onclick="showShopInfo('${id}', ${price})">
+                <div style="display:flex; align-items:center; gap:15px;">
+                    <div style="font-size:28px; background:#eee; border-radius:50%; width:40px; height:40px; display:flex; justify-content:center; align-items:center; border:2px solid #333;">${c.icon}</div>
+                    <div style="font-weight:bold;">${c.name}</div>
+                </div>
+                <div style="text-align:right;">
+                    <div style="color:#ffd700; font-weight:bold;">${price}G</div>
+                    <div style="font-size:10px; color:#ccc;">▶</div>
+                </div>
+            </div>`;
+        });
+    }
+
+    // === [핵심 수정] 상세 정보 팝업 (강제 그리기 방식) ===
+    // HTML에 버튼이 있든 없든, 스크립트가 알아서 버튼을 만들어 넣으므로 오류가 나지 않습니다.
+    window.showShopInfo = function(id, price) {
+        let c = CARD_DB[id];
+        const modalOverlay = document.getElementById('modal-overlay');
+        const modalBox = document.querySelector('.modal-box'); // 클래스로 찾음
+
+        // 팝업 내용을 스크립트로 직접 작성 (오류 원천 차단)
+        modalBox.innerHTML = `
+            <h3 style="color:#333; margin-bottom:10px;">${c.name}</h3>
+            <div style="font-size:50px; margin:10px;">${c.icon}</div>
+            <div style="background:#f9f9f9; color:#333; padding:10px; border-radius:8px; text-align:left; font-size:12px; margin-bottom:15px; border:2px solid #ccc;">
+                <div><strong>효과:</strong> ${c.desc}</div>
+                <div style="margin-top:5px;"><strong>유형:</strong> <span style="color:${c.color}; font-weight:bold;">${c.type.toUpperCase()}</span></div>
+            </div>
+            <div style="color:#e67e22; font-weight:bold; margin-bottom:15px; font-size:16px;">가격: ${price} G</div>
+            <div style="display:flex; justify-content:center; gap:10px;">
+                <button id="btn-buy-confirm" class="btn-back" style="background:#2ecc71; color:white; border-color:#27ae60;">구매</button>
+                <button id="btn-buy-cancel" class="btn-back" style="background:#95a5a6; color:white;">취소</button>
+            </div>
+        `;
+
+        // 버튼에 기능 연결
+        document.getElementById('btn-buy-confirm').onclick = function() {
+            buyCard(id, price);
+            modalOverlay.style.display = 'none';
+        };
+        document.getElementById('btn-buy-cancel').onclick = function() {
+            modalOverlay.style.display = 'none';
+        };
+
+        modalOverlay.style.display = 'flex';
+    };
+
+    // [유지] 구매 로직
+    function buyCard(id, price) {
+        if(gameData.gold >= price) { 
+            gameData.gold -= price; 
+            gameData.myDeck.push(id); 
+            saveData(); 
+            renderShop(); // UI 갱신
+            alert(`[${CARD_DB[id].name}] 구매 완료!`);
+        }
+        else {
+            alert("골드가 부족합니다!");
+        }
+    }
+    loadData();
+</script>
+</body>
+</html>

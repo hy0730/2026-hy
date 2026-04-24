@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="icon" href="data:,">
+    <title>안양의 시간 : 기록 복구</title>
+    
+    <style>
+        /* --- 1. 글로벌 리셋 및 레트로 테마 --- */
+        @import url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_2001@1.1/DungGeunMo.css');
+
+        :root {
+            --bg-dark: #121212;
+            --gold: #ffd700;
+            --blue: #00d4ff;
+            --red: #e74c3c;
+            --locked: grayscale(100%) blur(2px);
+            --retro-shadow: 4px 4px 0px rgba(0,0,0,0.8);
+        }
+
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body, html { 
+            margin: 0; padding: 0; width: 100%; height: 100%; 
+            background-color: var(--bg-dark); color: #fff;
+            font-family: 'DungGeunMo', sans-serif; overflow: hidden;
+            user-select: none;
+        }
+
+        #main-app { display: flex; flex-direction: column; width: 100vw; height: 100vh; }
+        
+        header {
+            height: 60px; background: rgba(0,0,0,0.95);
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 0 20px; border-bottom: 3px solid var(--gold);
+            z-index: 100;
+        }
+        .logo { font-size: 1.1rem; color: var(--gold); text-shadow: 0 0 5px rgba(255,215,0,0.5); }
+        
+        .header-controls { display: flex; gap: 10px; align-items: center; }
+        .btn-mute { 
+            background: none; border: 1px solid var(--gold); color: var(--gold);
+            padding: 5px 12px; border-radius: 5px; font-family: 'DungGeunMo'; font-size: 0.8rem;
+            cursor: pointer; transition: all 0.2s;
+        }
+        .btn-mute:active { transform: scale(0.9); }
+        .progress-badge { 
+            background: rgba(255,215,0,0.1); border: 1px solid var(--gold);
+            padding: 5px 10px; border-radius: 20px; font-size: 0.85rem; color: var(--gold);
+        }
+
+        /* --- 2. 지도 및 마커 (모바일 터치 최적화) --- */
+        #map-container { flex: 1; position: relative; background: #1a1a1a; overflow: hidden; }
+        #temp-map { width: 100%; height: 100%; object-fit: cover; opacity: 0.6; transition: opacity 1s; }
+        
+        #marker-layer { position: absolute; inset: 0; z-index: 10; }
+        .marker {
+            position: absolute; width: 80px; height: 100px;
+            display: flex; flex-direction: column; align-items: center;
+            pointer-events: auto; cursor: pointer;
+            transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .marker:active { transform: scale(0.9); }
+        .marker img { 
+            width: 60px; height: 60px; object-fit: contain; 
+            filter: drop-shadow(0 0 5px #000); 
+            image-rendering: pixelated;
+        }
+        .marker .label {
+            margin-top: 5px; font-size: 10px; background: rgba(0,0,0,0.85);
+            padding: 3px 8px; border-radius: 4px; border: 1px solid rgba(255,215,0,0.5);
+            color: #eee; white-space: nowrap;
+        }
+
+        .marker.locked { filter: var(--locked); opacity: 0.4; pointer-events: none; }
+        .marker.visited { filter: none; opacity: 1; }
+        .marker.visited .label { border-color: var(--gold); color: var(--gold); }
+        .marker.visited::after {
+            content: '✓'; position: absolute; top: -5px; right: 10px;
+            background: var(--gold); color: #000; width: 22px; height: 22px;
+            border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            font-weight: bold; border: 2px solid #000; font-size: 14px;
+        }
+
+        /* --- 3. 하단 UI --- */
+        footer { height: 50px; background: #000; display: flex; align-items: center; justify-content: center; border-top: 1px solid #333; }
+        #guide-text { font-size: 0.85rem; color: #888; white-space: pre-wrap; text-align: center; }
+
+        .floating-btns { position: fixed; bottom: 70px; width: 100%; display: flex; justify-content: space-between; padding: 0 20px; z-index: 500; }
+        .btn-round { background: var(--blue); border: none; padding: 12px 20px; border-radius: 25px; color: #fff; font-family: 'DungGeunMo'; cursor: pointer; box-shadow: var(--retro-shadow); transition: transform 0.1s; }
+        .btn-round:active { transform: translate(2px, 2px); box-shadow: none; }
+        .btn-reset { background: rgba(255,255,255,0.05); color: #555; font-size: 0.8rem; border: 1px solid #333; box-shadow: none; }
+
+        /* --- 4. 오버레이 및 모달 (임명장/도감) --- */
+        .overlay {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.95);
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            z-index: 2000; padding: 20px; text-align: center;
+        }
+        #intro-text { max-width: 500px; line-height: 1.8; color: #00ff00; font-size: 1.2rem; white-space: pre-wrap; word-break: keep-all; }
+        .skip-notice { font-size: 0.85rem; color: #666; margin-top: 25px; animation: blink 1.5s infinite; }
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+        .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 3000; align-items: center; justify-content: center; padding: 20px; }
+        .modal-content { background: #1a1a1a; width: 100%; max-width: 600px; border: 2px solid var(--blue); border-radius: 12px; padding: 25px; display: flex; flex-direction: column; max-height: 85vh; }
+        #gallery-list { flex: 1; overflow-y: auto; margin: 20px 0; padding-right: 10px; }
+        #gallery-list::-webkit-scrollbar { width: 6px; }
+        #gallery-list::-webkit-scrollbar-thumb { background: var(--blue); border-radius: 3px; }
+        
+        .user-thought {
+            background: rgba(0, 212, 255, 0.08); border-left: 4px solid var(--blue);
+            padding: 12px; margin-top: 12px; font-size: 0.85rem; color: #ddd; font-style: italic; line-height: 1.4;
+        }
+
+        .certificate-css { width: 100%; max-width: 400px; aspect-ratio: 4/3; background: #fff9c4; border: 8px double var(--gold); color: #333; padding: 20px; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+    </style>
+</head>
+<body>
+
+<div id="main-app">
+    <div id="intro-overlay" class="overlay" onclick="Engine.handleIntroClick()">
+        <div id="intro-text"></div>
+        <div class="skip-notice">화면을 터치하면 대화가 빠르게 진행됩니다.</div>
+        <button id="btn-start" class="btn-round" style="display:none; margin-top:30px; background:var(--gold); color:#000;" onclick="Engine.startGame(event)">조사 시작</button>
+    </div>
+
+    <div id="ending-overlay" class="overlay" style="display:none;">
+        <h2 style="color:var(--gold); margin-bottom:20px; text-shadow: 0 0 10px var(--gold);">역사 복원 완료</h2>
+        <div class="certificate-css">
+            <h3 style="margin:0; font-size:1.6rem; border-bottom: 2px solid #333; padding-bottom: 10px;">명예 복원관 임명장</h3>
+            <p style="margin:25px 0; line-height:1.7; font-size: 1rem;">위 분석관은 안양의 흩어진<br><b>9대 시대별 기록</b>을 완벽하게 복구하여<br>미래로 전달하였으므로 이 증서를 수여함</p>
+            <div style="background:var(--red); color:#fff; padding:8px 18px; border-radius:50%; font-weight: bold; border: 2px solid #000;">인증</div>
+        </div>
+        <button class="btn-round" style="margin-top:30px; background:var(--gold); color:#000; width: 200px;" onclick="Engine.closeEnding()">지도로 돌아가기</button>
+    </div>
+
+    <header>
+        <div class="logo">안양의 시간 : 기록 복구</div>
+        <div class="header-controls">
+            <button id="mute-toggle" class="btn-mute" onclick="Engine.toggleMute()">소리 켬</button>
+            <div class="progress-badge">복구율 <span id="progress-percent">0</span>%</div>
+        </div>
+    </header>
+
+    <main id="map-container">
+        <img src="assets/images/map.png" id="temp-map" onerror="this.src='https://via.placeholder.com/1000x800/222/ffd700?text=Anyang+Map'">
+        <div id="marker-layer"></div>
+    </main>
+
+    <div class="floating-btns">
+        <button class="btn-round btn-reset" onclick="Engine.resetData()">초기화</button>
+        <button class="btn-round" onclick="Engine.openGallery()">기록 보관소</button>
+    </div>
+
+    <footer>
+        <div id="guide-text"></div>
+    </footer>
+</div>
+
+<div id="gallery-modal" class="modal" onclick="this.style.display='none'">
+    <div class="modal-content" onclick="event.stopPropagation()">
+        <h2 style="color:var(--blue); border-bottom:1px solid #333; padding-bottom:15px; margin-top:0;">안양의 기록 (도감)</h2>
+        <div id="gallery-list"></div>
+        <button class="btn-round" style="width:100%; margin-top: 10px;" onclick="document.getElementById('gallery-modal').style.display='none'">닫기</button>
+    </div>
+</div>
+
+<script src="data/data.js"></script>
+
+<script>
+/**
+ * Engine: 안양의 시간 통합 컨트롤러 v2.0
+ */
+const Engine = {
+    clearedStages: JSON.parse(localStorage.getItem('cleared_stages')) || [],
+    userAnswers: JSON.parse(localStorage.getItem('user_answers')) || {},
+    isTyping: false,
+    fullIntro: "데이터 분석 시스템 가동... 안양의 흩어진 역사를 감지했습니다.\n분석관님, 9곳의 현장을 조사하여 멈춰버린 기록을 다시 복원해 주세요.",
+    typingIdx: 0,
+    isMuted: localStorage.getItem('isMuted') === 'true',
+
+    init() {
+        // 데이터 로드 확인용 (먹통 방지)
+        if (typeof STAGES_DATA === 'undefined') {
+            console.error("STAGES_DATA가 정의되지 않았습니다. data/data.js 경로를 확인하세요.");
+            document.getElementById('guide-text').innerText = "데이터 로딩 오류!";
+            return;
+        }
+
+        this.renderMarkers();
+        this.checkIntro();
+        this.updateMuteUI();
+        this.updateGuide();
+    },
+
+    // [개선 2] 인트로 타이핑 제어
+    checkIntro() {
+        if (this.clearedStages.length > 0 || localStorage.getItem('intro_seen')) {
+            document.getElementById('intro-overlay').style.display = 'none';
+            return;
+        }
+        this.startTypewriter();
+    },
+
+    startTypewriter() {
+        this.isTyping = true;
+        const target = document.getElementById('intro-text');
+        this.interval = setInterval(() => {
+            target.textContent = this.fullIntro.substring(0, this.typingIdx++);
+            if (this.typingIdx > this.fullIntro.length) this.finishIntro();
+        }, 50);
+    },
+
+    handleIntroClick() {
+        if (this.isTyping) this.finishIntro();
+    },
+
+    finishIntro() {
+        clearInterval(this.interval);
+        this.isTyping = false;
+        document.getElementById('intro-text').textContent = this.fullIntro;
+        document.getElementById('btn-start').style.display = 'block';
+    },
+
+    startGame(e) {
+        e.stopPropagation();
+        localStorage.setItem('intro_seen', 'true');
+        document.getElementById('intro-overlay').style.display = 'none';
+    },
+
+    // [개선 1] 마커 렌더링 및 순차적 잠금 해제
+    renderMarkers() {
+        const layer = document.getElementById('marker-layer');
+        if (!layer) return;
+        layer.innerHTML = '';
+        
+        const positions = [
+            { id: "GWANYANG", t: '9%', l: '80%', key: 'gwanyang', first: true },
+            { id: "PYEONGCHON", t: '80%', l: '65%', key: 'pyeongchon' },
+            { id: "SEOKSILBUN", t: '5%', l: '5%', key: 'seoksu' },
+            { id: "JUNGCHO", t: '25%', l: '60%', key: 'jungcho' },
+            { id: "MAAEJONG", t: '20%', l: '70%', key: 'bell' },
+            { id: "ANYANGSA_GVIBU", t: '3%', l: '60%', key: 'turtle' },
+            { id: "BISANDONG", t: '45%', l: '40%', key: 'bisan' },
+            { id: "MANANGYO", t: '60%', l: '50%', key: 'bridge' },
+            { id: "SEOIMYEON", t: '80%', l: '45%', key: 'seoimyeon' }
+        ];
+
+        let clearCount = 0;
+        // 관양동을 깼거나, 아예 처음인 경우만 관양동 활성화
+        const isFirstCleared = this.clearedStages.includes('GWANYANG');
+
+        positions.forEach((pos) => {
+            const isCleared = this.clearedStages.includes(pos.id);
+            if(isCleared) clearCount++;
+
+            const marker = document.createElement('div');
+            // 첫 번째 스테이지거나, 이미 깼거나, 첫 번째를 깼다면 모두 활성화 (자유 탐험 모드)
+            const isLocked = !pos.first && !isFirstCleared && !isCleared;
+            
+            marker.className = `marker ${isCleared ? 'visited' : (isLocked ? 'locked' : 'active')}`;
+            marker.style.top = pos.t;
+            marker.style.left = pos.l;
+
+            let imgSrc = (isCleared || !isLocked) ? `assets/images/relic_${pos.key}_main.png` : `assets/images/question_mark.png`;
+            let labelText = (isCleared || !isLocked) ? STAGES_DATA[pos.id].title.split('.').pop().trim() : "???";
+
+            marker.innerHTML = `<img src="${imgSrc}"><div class="label">${labelText}</div>`;
+
+            marker.onclick = () => {
+                if (isLocked) {
+                    alert("안양의 시작인 '관양동 선사유적지'를 먼저 조사해 주세요!");
+                    return;
+                }
+                location.href = `./stages/stage.html?id=${pos.id}`;
+            };
+            layer.appendChild(marker);
+        });
+
+        const progress = Math.round((clearCount / 9) * 100);
+        document.getElementById('progress-percent').innerText = progress;
+        
+        if (progress === 100 && !localStorage.getItem('ending_seen')) {
+            setTimeout(() => this.showEnding(), 1000);
+        }
+    },
+
+    updateGuide() {
+        const guide = document.getElementById('guide-text');
+        if (this.clearedStages.length === 0) {
+            guide.innerText = "조사할 유적지를 선택하세요. '관양동'부터 시작하는 것이 좋습니다.";
+        } else if (this.clearedStages.length === 9) {
+            guide.innerHTML = "<span style='color:var(--gold)'>★ 축하합니다! 모든 시대의 기록이 복구되었습니다. ★</span>";
+        } else {
+            guide.innerText = "훌륭합니다. 다른 시대의 흔적도 계속해서 찾아주세요.";
+        }
+    },
+
+    // [개선 3] 도감 및 유저 답변 표시
+    openGallery() {
+        const modal = document.getElementById('gallery-modal');
+        const list = document.getElementById('gallery-list');
+        list.innerHTML = '';
+        
+        Object.keys(STAGES_DATA).forEach((key) => {
+            const isCleared = this.clearedStages.includes(key);
+            const data = STAGES_DATA[key];
+            const savedThought = this.userAnswers[key]; 
+
+            const item = document.createElement('div');
+            item.style.cssText = `margin-bottom:20px; padding:15px; background:#222; border-radius:8px; border: 1px solid ${isCleared ? '#444' : '#222'}; opacity:${isCleared?1:0.4}`;
+            
+            // 이미지 파일명 규칙 적용
+            const fileKey = key === "ANYANGSA_GVIBU" ? "turtle" : key === "SEOKSILBUN" ? "seoksu" : key === "MANANGYO" ? "bridge" : key.toLowerCase();
+
+            item.innerHTML = `
+                <div style="display:flex; gap:15px; align-items:center;">
+                    <img src="assets/images/relic_${fileKey}_real.png" style="width:65px; height:65px; object-fit:contain; background:#111; border-radius:5px;" onerror="this.src='assets/images/question_mark.png'">
+                    <div style="flex:1">
+                        <div style="color:${isCleared ? 'var(--gold)' : '#666'}; font-weight:bold; font-size:1rem;">${isCleared ? data.title.split('.').pop() : "잠겨 있는 기록"}</div>
+                        <div style="font-size:0.75rem; color:#aaa; margin-top:6px; line-height:1.5;">${isCleared ? data.educationalFact : "해당 스테이지를 완료하면 역사적 사실이 공개됩니다."}</div>
+                    </div>
+                </div>
+                ${isCleared && savedThought ? `<div class="user-thought"><b>나의 기록:</b> "${savedThought}"</div>` : ''}
+            `;
+            list.appendChild(item);
+        });
+        modal.style.display = 'flex';
+    },
+
+    // [개선 4] 사운드 제어
+    toggleMute() {
+        this.isMuted = !this.isMuted;
+        localStorage.setItem('isMuted', this.isMuted);
+        this.updateMuteUI();
+    },
+
+    updateMuteUI() {
+        const btn = document.getElementById('mute-toggle');
+        if (!btn) return;
+        btn.innerText = this.isMuted ? "소리 끔" : "소리 켬";
+        btn.style.borderColor = this.isMuted ? "var(--red)" : "var(--gold)";
+        btn.style.color = this.isMuted ? "var(--red)" : "var(--gold)";
+    },
+
+    showEnding() {
+        document.getElementById('ending-overlay').style.display = 'flex';
+    },
+
+    closeEnding() {
+        localStorage.setItem('ending_seen', 'true');
+        document.getElementById('ending-overlay').style.display = 'none';
+        this.renderMarkers();
+        this.updateGuide();
+    },
+
+    resetData() {
+        if (confirm("주의: 모든 조사 기록과 당신이 남긴 소중한 생각들이 영구적으로 삭제됩니다. 정말 초기화하시겠습니까?")) {
+            localStorage.clear();
+            location.reload();
+        }
+    }
+};
+
+window.onload = () => Engine.init();
+</script>
+</body>
+</html>

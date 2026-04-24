@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="icon" href="data:,">
+    <title>안양의 시간 : 현장 조사</title>
+    
+    <link rel="stylesheet" href="../style.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="fade-in">
+
+    <div id="fade-overlay"></div>
+    <div id="bg-layer"></div>
+    
+    <div id="custom-cursor"></div>
+
+    <div class="top-nav" style="display: flex; justify-content: space-between; width: calc(100% - 30px); align-items: center; position: absolute; top: 15px; left: 15px; z-index: 1000;">
+        <button class="btn-home" onclick="Engine.goHome()" style="background: rgba(0,0,0,0.6); color: #fff; border: 1px solid #555; padding: 8px 15px; border-radius: 5px; cursor: pointer;">← 지도보기</button>
+        
+        <button id="mute-toggle" class="btn-mute" style="background: rgba(0,0,0,0.7); border: 1px solid var(--gold); color: var(--gold); padding: 8px 15px; border-radius: 5px; font-family: 'DungGeunMo'; font-size: 0.85rem; cursor: pointer;" onclick="Engine.toggleMute()">소리 켬</button>
+    </div>
+
+    <div id="game-container" style="display: none; position: absolute; inset: 0; z-index: 100; align-items: center; justify-content: center; background: rgba(0,0,0,0.5);">
+        <div id="minigame-ui" style="width: 90%; max-width: 500px; background: rgba(20, 20, 25, 0.95); border: 3px solid var(--gold); border-radius: 10px; padding: 20px; text-align: center; box-shadow: 0 0 30px rgba(0,0,0,0.8);">
+            </div>
+    </div>
+
+    <div id="dialogue-box" onclick="Engine.next()" style="position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); width: 94%; max-width: 800px; background: rgba(10, 10, 15, 0.95); border: 3px solid var(--gold); border-radius: 8px; padding: 15px; z-index: 500; cursor: pointer; box-shadow: 0 5px 25px rgba(0,0,0,0.9);">
+        <div id="dialogue-inner" style="display: flex; gap: 15px; align-items: center;">
+            <div id="char-portrait" style="width: 80px; height: 80px; background: #222; border: 1px solid #444; flex-shrink: 0; overflow: hidden; border-radius: 4px;">
+                <img id="portrait-img" src="../assets/images/logo_1.png" alt="캐릭터" style="width: 100%; height: 100%; object-fit: contain;">
+            </div>
+            
+            <div class="dialogue-content" style="flex: 1; position: relative;">
+                <div id="char-name" style="color: var(--gold); font-size: 1rem; margin-bottom: 5px; font-weight: bold;">시스템</div>
+                <div id="dialogue-text" style="font-size: 1.05rem; line-height: 1.5; color: #eee; min-height: 3em; white-space: pre-wrap;">데이터를 분석 중입니다...</div>
+                
+                <div class="skip-hint" style="font-size: 0.75rem; color: #888; margin-top: 10px; text-align: right; animation: pulse 2s infinite;">
+                    화면을 터치하면 빠르게 진행됩니다.
+                </div>
+            </div>
+            
+            <div class="next-indicator"></div>
+        </div>
+    </div>
+
+    <div id="fact-modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 3000; align-items: center; justify-content: center; padding: 20px;">
+        <div class="modal-inner" style="background: #fff9c4; border: 8px double var(--gold); color: #333; padding: 25px; width: 100%; max-width: 450px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
+            <h2 id="fact-title" style="margin-top: 0; color: #8d6e63; border-bottom: 2px solid rgba(0,0,0,0.1); padding-bottom: 10px;">기록 복구 성공!</h2>
+            <div id="fact-content-area" style="text-align: left; margin: 20px 0; line-height: 1.6; font-size: 1rem;">
+                <p id="fact-content"></p>
+            </div>
+            <button class="btn-finish" onclick="Engine.finish()" style="width: 100%; padding: 15px; background: #2ecc71; color: #fff; border: none; border-radius: 5px; font-family: 'DungGeunMo'; font-size: 1.1rem; cursor: pointer; box-shadow: 0 4px 0 #1b7a43;">나의 기록 저장 및 지도로 돌아가기</button>
+        </div>
+    </div>
+
+    <script src="../data/data.js"></script>
+    <script src="stage.js"></script>
+
+</body>
+</html>

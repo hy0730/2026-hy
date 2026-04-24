@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>발굴 작전 : 문화유산을 안전하게 구출하라!</title>
+    <link href="https://fonts.googleapis.com/css2?family=DungGeunMo&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <style>
+        /* [스타일 로딩 전 깨짐 방지] */
+        :root { --retro-bg: #8d6e63; --retro-box: #fdfcf8; --retro-border: #3e2723; }
+        body { background-color: #222; }
+        
+        .scanline {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,0) 50%, rgba(0,0,0,0.05) 50%, rgba(0,0,0,0.05));
+            background-size: 100% 4px; pointer-events: none; z-index: 900;
+        }
+        .bg-animate {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background-image: url('../images/map.png');
+            background-size: 150%; background-position: center;
+            opacity: 0.15; z-index: 0;
+            animation: panMap 60s linear infinite; pointer-events: none;
+        }
+        @keyframes panMap { 
+            0% { background-position: 0% 50%; } 
+            50% { background-position: 100% 50%; } 
+            100% { background-position: 0% 50%; } 
+        }
+        #app-container {
+            border-left: 4px solid var(--retro-border);
+            border-right: 4px solid var(--retro-border);
+            background-color: var(--retro-box); overflow: hidden;
+            position: relative; /* 중요: 오버레이 위치 기준 */
+        }
+    </style>
+    <script>
+        if (!localStorage.getItem("anyang_heritage_user")) {
+            localStorage.removeItem("anyang_excavation_user");
+        }
+    </script>
+</head>
+<body>
+
+    <div id="app-container">
+        <div class="bg-animate"></div>
+        <div class="scanline"></div>
+        
+        <div id="view-intro" class="screen active" style="z-index: 1000;">
+            <div class="story-overlay">
+                <div class="story-content">
+                    <img src="../images/han_2.png" class="intro-char-img" onerror="this.src='../images/han_1.png'">
+                    <h2>작전 브리핑</h2>
+                    <p class="story-text">
+                        "폭풍으로 인해 유적지 좌표가 소실되었습니다.<br><br>
+                        특수 장비를 사용하여 땅속에 묻힌 유물을 찾아내고 복원해주십시오."
+                    </p>
+                    <button class="btn-start-intro" onclick="finishIntro()">작전 개시 ▶</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="view-lobby" class="screen bg-scroll" style="z-index: 10;">
+            <div class="lobby-overlay"></div>
+            
+            <div class="lobby-header">
+                <div class="logo-area">
+                    <img src="../images/logo_1.png" class="app-logo" alt="로고" onerror="this.src='../images/han_1.png'">
+                    <div class="app-title">
+                        <h2>발굴 작전 본부</h2>
+                        <span class="sub-title">Excavation Ops HQ</span>
+                    </div>
+                </div>
+                <div class="header-btns">
+                    <button class="btn-guide" onclick="openGuideModal()">?</button>
+                </div>
+                <div class="status-panel">
+                    <div class="resource-badge">
+                        <span class="label">연구 예산</span>
+                        <span class="value"><span id="lobby-gold">0</span> G</span>
+                    </div>
+                </div>
+            </div>
+
+            <div id="quest-board" class="quest-board">의뢰 현황판: 미복원 유물 <b>0</b>건</div>
+
+            <div class="stage-wrapper">
+                <div class="section-title">▼ 작전 지역 선택</div>
+                <div class="stage-list">
+                    <div class="stage-card" id="stage-easy" onclick="safePlaySFX('sfx_click.mp3'); startGame('easy')">
+                        <div class="card-header easy">
+                            <span class="badge">EASY</span> <span class="region">신호 감지됨</span>
+                        </div>
+                        <div class="card-body">
+                            <h3>탐색 구역 A</h3>
+                            <div class="mission-info">
+                                <span>⚠️ 모래 위주의 안전한 지형</span>
+                                <span>🎲 <b>랜덤 유물</b> 등장</span>
+                            </div>
+                        </div>
+                        <button class="btn-start">탐색 시작</button>
+                    </div>
+
+                    <div class="stage-card" id="stage-normal" onclick="safePlaySFX('sfx_click.mp3'); startGame('normal')">
+                        <div class="card-header normal">
+                            <span class="badge">NORMAL</span> <span class="region">신호 미약</span>
+                        </div>
+                        <div class="card-body">
+                            <h3>탐색 구역 B</h3>
+                            <div class="mission-info">
+                                <span>⚠️ 흙/바위 복합 지형</span>
+                                <span>🎲 <b>랜덤 유물</b> 등장</span>
+                            </div>
+                        </div>
+                        <div class="lock-screen"><div class="lock-icon">🔒 EASY 완료 필요</div></div>
+                    </div>
+
+                    <div class="stage-card" id="stage-hard" onclick="safePlaySFX('sfx_click.mp3'); startGame('hard')">
+                        <div class="card-header hard">
+                            <span class="badge">HARD</span> <span class="region">위험 지역</span>
+                        </div>
+                        <div class="card-body">
+                            <h3>탐색 구역 C</h3>
+                            <div class="mission-info">
+                                <span>⚠️ 암반/수중 고난이도 지형</span>
+                                <span>🎲 <b>랜덤 유물</b> 등장</span>
+                            </div>
+                        </div>
+                        <div class="lock-screen"><div class="lock-icon">🔒 NORMAL 완료 필요</div></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bottom-nav">
+                <button class="nav-item" id="btn-deck" onclick="openDeckMenu()"><span class="icon">🎒</span><span>장비</span></button>
+                <button class="nav-item" id="btn-shop" onclick="openShopMenu()"><span class="icon">🏛️</span><span>보급소</span></button>
+                <button class="nav-item" id="btn-lab" onclick="openLabMenu()"><span class="icon">🧪</span><span>연구</span></button>
+                <button class="nav-item quit" onclick="safePlaySFX('sfx_click.mp3'); location.href='../index.html'"><span class="icon">🏠</span><span>메인</span></button>
+            </div>
+        </div>
+
+        <div id="view-game" class="screen" style="z-index: 10;">
+            
+            <div class="tactical-hud">
+                <div class="hud-row top">
+                    <div class="stage-info">
+                        <button class="btn-back" onclick="quitGame()">🏠 복귀</button>
+                        <div class="stage-name" id="ingame-stage-name">탐색 중...</div>
+                    </div>
+                    <button class="btn-end-turn" onclick="endTurn()">
+                        <span class="turn-label">남은 턴</span>
+                        <span id="turn-count" class="turn-val">20</span>
+                    </button>
+                </div>
+
+                <div class="hud-row gauges">
+                    <div class="gauge-box stability">
+                        <div class="label-row">
+                            <span class="icon">🧱</span> <span>안정도</span> <span class="val" id="val-stability">100%</span>
+                        </div>
+                        <div class="gauge-track"><div id="bar-stability" class="gauge-fill" style="width: 100%;"></div></div>
+                    </div>
+                    <div class="gauge-box damage">
+                        <div class="label-row">
+                            <span class="icon">💔</span> <span>손상도</span> <span class="val" id="val-damage">0%</span>
+                        </div>
+                        <div class="gauge-track"><div id="bar-damage" class="gauge-fill" style="width: 0%;"></div></div>
+                    </div>
+                    <div class="gauge-box durability">
+                        <div class="label-row">
+                            <span class="icon">🛡️</span> <span>훼손도</span> <span class="val" id="val-durability">100%</span>
+                        </div>
+                        <div class="gauge-track"><div id="bar-durability" class="gauge-fill" style="width: 100%;"></div></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="viewport-area">
+                <div id="battle-feedback-layer"></div>
+                <div id="grid-board" class="grid-board size-3"></div>
+            </div>
+
+            <div class="control-panel">
+                <div class="left-stats">
+                    <div class="ap-display-new">
+                        <div class="ap-icon">⚡</div>
+                        <div class="ap-gauge-wrapper">
+                            <div id="ap-fill-bar" class="ap-fill" style="width: 100%;"></div>
+                        </div>
+                        <div class="ap-text"><span id="ap-current">5</span> / <span id="ap-max">5</span></div>
+                    </div>
+                    
+                    <div class="deck-display">
+                        <div class="pile-icon">🃏</div>
+                        <span id="draw-pile-count">15</span>
+                    </div>
+                </div>
+
+                <div class="hand-wrapper">
+                    <div id="hand-area" class="hand-scroll"></div>
+                </div>
+            </div>
+
+            <div id="result-overlay" style="display:none; z-index: 2000;">
+                <div class="report-card" style="max-height: 85vh; display: flex; flex-direction: column;">
+                    <div class="report-header" style="flex-shrink: 0;"><h2>EXCAVATION REPORT</h2></div>
+                    
+                    <div class="report-body" style="overflow-y: auto; flex: 1;">
+                        <div class="relic-frame">
+                            <img id="res-image" src="" alt="유물" style="transform: rotate(180deg); display:none;" onerror="this.style.display='none'">
+                            <div id="res-unknown" class="unknown-mark">?</div>
+                        </div>
+                        <h3 id="res-title">발굴 성공!</h3>
+                        <p id="res-content" class="res-desc">설명</p>
+                        <div class="grade-table">
+                            <div class="grade-row">
+                                <span>안정도 보너스</span> <span class="score-val">+<span id="score-stability">0</span></span>
+                            </div>
+                            <div class="grade-row">
+                                <span>손상 패널티</span> <span class="score-val bad">-<span id="score-damage">0</span></span>
+                            </div>
+                            <div class="grade-row highlight-row">
+                                <span>획득 예산</span> <span class="score-val gold">+<span id="res-gold">0</span> G</span>
+                            </div>
+                            <div class="grade-total">
+                                <span>최종 등급</span>
+                                <span id="res-grade-badge" class="grade-badge s">S</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="report-footer" style="flex-shrink: 0;">
+                        <button class="btn-confirm" onclick="safePlaySFX('sfx_click.mp3'); goLobby()">본부로 복귀</button>
+                    </div>
+                </div>
+            </div>
+
+        </div> 
+        
+        <div id="tutorial-overlay" style="display:none; z-index: 9999; pointer-events: none;">
+            
+            <div id="tuto-focus-area">
+                <div id="tuto-highlight"></div> 
+                <div id="tuto-arrow">👇</div>   
+            </div>
+
+            <div class="dialogue-container top-position">
+                <div class="char-portrait"><img src="../images/han_2.png" alt="한" onerror="this.src='../images/han_1.png'"></div>
+                <div class="dialogue-bubble">
+                    <div class="speaker-name">한 (분석관)</div>
+                    <div class="speaker-text" id="tuto-msg">작전을 시작합니다.</div>
+                    <button id="tuto-next-btn" class="btn-next-step" onclick="safePlaySFX('sfx_click.mp3'); nextTutorialStep()">다음 ▶</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="message-toast" class="toast-hidden" style="z-index: 3000;">작전 개시!</div>
+
+        <div id="shuffle-overlay" style="display:none; z-index: 2500;">
+            <div class="shuffle-text">SHUFFLING...</div>
+            <div class="shuffle-icon">🃏</div>
+        </div>
+
+        <div id="menu-modal-wrapper" class="modal-overlay" style="display:none; z-index: 3000;"></div> 
+
+        <div id="universal-card-modal" class="modal-overlay" style="display:none;">
+            <div class="modal-box card-detail">
+                <div class="card-preview large">
+                    <div id="u-card-icon" class="card-icon">🖌️</div>
+                </div>
+                <h3 id="u-card-name" class="modal-title no-border">아이템 이름</h3>
+                
+                <div id="u-card-tags" class="keyword-tags"></div>
+                <p id="u-card-desc" class="card-desc-large">설명 텍스트</p>
+                <div id="u-keyword-desc-box" class="keyword-desc-box" style="display:none;"></div>
+
+                <div class="card-detail-info">
+                    <div class="info-row">
+                        <span class="label">⚡ 행동력 소모</span>
+                        <span class="val" id="u-card-cost">1</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="label">💥 내구도 피해</span>
+                        <span class="val" id="u-card-power">1</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="label">⚠️ 위험도</span>
+                        <span class="val risk" id="u-card-risk">0</span>
+                    </div>
+                </div>
+
+                <div class="popup-actions">
+                    <button id="btn-modal-action" class="btn-use">사용하기</button>
+                    <button class="btn-cancel" onclick="closeUniversalModal()">취소</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="modal-guide" class="modal-overlay" style="display:none; z-index: 3500;">
+            <div class="modal-box guide">
+                <div class="modal-title">📘 발굴 메뉴얼</div>
+                <div class="guide-content">
+                    <div class="guide-section">
+                        <h4>1. 승리 조건</h4>
+                        <p>타일의 <b>내구도(HP)</b>를 0으로 만들어 유물을 드러내세요.<br>
+                        안정도가 0이 되거나 유물이 100% 파손되면 실패합니다.</p>
+                    </div>
+                    <div class="guide-section">
+                        <h4>2. 전략 가이드</h4>
+                        <p><b>[키워드]</b>와 <b>[콤보]</b>를 활용하세요.<br>
+                        연구소에서 장비를 업그레이드할 수 있습니다.</p>
+                    </div>
+                </div>
+                <button class="btn-confirm" onclick="safePlaySFX('sfx_click.mp3'); closeGuideModal()">닫기</button>
+            </div>
+        </div>
+
+    </div> 
+    
+    <script src="../data.js"></script>
+    <script src="script.js"></script>
+    <script>
+
+        function openGuideModal() { 
+            safePlaySFX('sfx_click.mp3'); 
+            document.getElementById('modal-guide').style.display = 'flex'; 
+        }
+        
+        function closeGuideModal() { 
+            safePlaySFX('sfx_click.mp3'); 
+            document.getElementById('modal-guide').style.display = 'none'; 
+        }
+    </script>
+</body>
+</html>

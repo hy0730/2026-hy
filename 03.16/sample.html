@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>안양 시간 탐험 : 빛을 되찾아라</title>
+    
+    <!-- 레트로 폰트 (둥근모) -->
+    <link href="https://fonts.googleapis.com/css2?family=DungGeunMo&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="sample.css">
+</head>
+<body>
+
+    <div id="app-container">
+        <!-- 공통 CRT 스캔라인 효과 -->
+        <div class="scanline"></div>
+
+        <!-- =========================================================
+             [1] 로딩 화면 (Loading Screen)
+             - 배경: 안양 지도, 중앙: 공식 로고
+             ========================================================= -->
+        <div id="loading-screen" class="screen active">
+            <img src="images/yanyangmap.jpg" class="bg-img map-dimmed" alt="지도 배경">
+            <div class="loading-content">
+                <img src="images/logo_1.png" class="loading-logo animate-float" alt="안양의 시간 로고">
+                <div class="progress-bar-container">
+                    <div id="loading-fill" class="progress-bar-fill"></div>
+                </div>
+                <p class="loading-text blink">시간의 문을 여는 중...</p>
+            </div>
+        </div>
+
+        <!-- =========================================================
+             [2] 프롤로그 화면 (Prologue Screen)
+             - 투명 캐릭터 슬라이드 인 & 타자기 효과
+             ========================================================= -->
+        <div id="prologue-screen" class="screen hidden">
+            <!-- 좌측 하단 한이 -->
+            <img src="images/han_3-removebg.png" id="prologue-han" class="char-slide-left hidden" alt="놀란 한이">
+            <!-- 우측 하단 양이 -->
+            <img src="images/yang_3-removebg.png" id="prologue-yang" class="char-slide-right hidden" alt="놀란 양이">
+            
+            <div class="prologue-dialogue-box">
+                <p id="prologue-text"></p>
+                <p class="touch-hint blink">화면을 터치하여 계속...</p>
+            </div>
+        </div>
+
+        <!-- =========================================================
+             [3] 메인 맵 화면 (Main Map Screen)
+             - 9개 스테이지 내비게이션
+             ========================================================= -->
+        <div id="main-screen" class="screen hidden">
+            <!-- 상단 HUD -->
+            <header class="hud-header">
+                <div class="hud-left">
+                    <img src="images/logo_3.png" class="hud-mini-logo" alt="작은 로고">
+                    <span class="hud-title">안양 시간 탐험</span>
+                </div>
+                <div class="hud-right">
+                    <span class="hud-piece-count">거울 조각: <span id="mirror-count" class="text-gold">0</span> / 9</span>
+                </div>
+            </header>
+
+            <!-- 인터랙티브 지도 영역 -->
+            <div class="map-container" id="interactive-map">
+                <!-- 컬러풀한 지도 배경 -->
+                <img src="images/yanyangmap 1.jpg" class="map-bg" alt="안양 컬러 지도">
+                
+                <!-- JS로 생성될 미니어처 핀들이 들어갈 자리 -->
+                <div id="map-pins-layer"></div>
+            </div>
+        </div>
+
+        <!-- =========================================================
+             [4] 다중 미니게임 모달 (Minigame Modal)
+             - 발굴(스크래치), 짝맞추기, 퀴즈 공통 모달
+             ========================================================= -->
+        <div id="minigame-modal" class="modal-overlay hidden">
+            <!-- 타임어택 경고 테두리용 컨테이너 -->
+            <div id="time-warning-border"></div>
+
+            <div class="modal-box retro-box">
+                <!-- 미니게임 퀘스트 헤더 -->
+                <div class="minigame-header">
+                    <h3 id="minigame-quest">단서를 찾아라!</h3>
+                    <div id="timer-display" class="timer hidden">⏳ <span id="time-left">10</span>초</div>
+                </div>
+
+                <!-- NPC 등장 영역 (예: 원시인) -->
+                <div id="npc-area" class="npc-area hidden">
+                    <img src="images/원시인 1.png" id="stage-npc" class="npc-img" alt="시대별 NPC">
+                    <div id="npc-bubble" class="npc-bubble">내 돌칼을 찾아줘!</div>
+                </div>
+
+                <!-- 실제 게임 플레이 영역 (Canvas 또는 Grid) -->
+                <div id="minigame-content" class="minigame-content">
+                    <!-- JS에서 동적으로 tile_soil.png 등을 덮어씌움 -->
+                </div>
+
+                <!-- 발굴 도구 패널 (상황에 따라 노출) -->
+                <div id="tool-panel" class="tool-panel hidden">
+                    <button class="tool-btn active" data-tool="brush"><img src="images/tool_brush.png" alt="붓"></button>
+                    <button class="tool-btn" data-tool="hammer"><img src="images/tool_hammer.png" alt="망치"></button>
+                    <button class="tool-btn" data-tool="spatula"><img src="images/tool_spatula.png" alt="헤라"></button>
+                    <button class="tool-btn" data-tool="scanner"><img src="images/tool_scanner.png" alt="스캐너"></button>
+                </div>
+            </div>
+        </div>
+
+        <!-- =========================================================
+             [5] 결과창 모달 (Stage Clear Modal)
+             ========================================================= -->
+        <div id="result-modal" class="modal-overlay hidden">
+            <div class="modal-box retro-box result-box">
+                <h2 class="text-green blink">목표 달성!</h2>
+                <div class="relic-showcase">
+                    <img id="cleared-relic-img" src="" alt="획득 유물">
+                </div>
+                <p id="cleared-desc" class="result-desc">유물 복원에 성공했습니다.</p>
+                <div class="reward-badge">
+                    <img src="images/1.png" class="star-badge" alt="거울 조각"> 거울 조각 획득!
+                </div>
+                <button id="btn-next-stage" class="pixel-btn full-width">지도로 돌아가기</button>
+            </div>
+        </div>
+
+        <!-- =========================================================
+             [6] 엔딩 & AR 거울 카메라 모달
+             ========================================================= -->
+        <div id="ar-modal" class="modal-overlay hidden">
+            <div class="ar-container">
+                <!-- 실제 카메라 화면 -->
+                <video id="ar-video" autoplay playsinline></video>
+                
+                <!-- AR 오버레이 (포토 프레임 역할) -->
+                <div class="ar-overlay-frame">
+                    <img src="images/logo_4.png" class="ar-title-logo" alt="안양 시간 탐험 로고">
+                    <!-- 투명 배경 한이&양이 브이 포즈 -->
+                    <img src="images/hanyang_1-removebg.png" class="ar-character-overlay" alt="한이 양이 기념사진">
+                </div>
+
+                <!-- 컨트롤 버튼 -->
+                <button id="close-ar" class="pixel-btn btn-close-ar">✖ 닫기</button>
+                <button id="btn-capture" class="pixel-btn btn-capture blink">📸 기념사진 찰칵!</button>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- 스크립트 연결 -->
+    <script src="sample.js"></script>
+</body>
+</html>

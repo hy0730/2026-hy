@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>우리 문화유산 보호하기 (Stage Select)</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        /* === 기본 스타일 === */
+        body { background-color: #121212; color: white; font-family: 'Pretendard', sans-serif; margin: 0; height: 100vh; overflow: hidden; display: flex; flex-direction: column; }
+        button { cursor: pointer; border: none; font-family: inherit; user-select: none; -webkit-tap-highlight-color: transparent; }
+        
+        .screen { display: none; width: 100%; height: 100%; flex-direction: column; align-items: center; position: absolute; top:0; left:0; background: #1a1a1a; z-index: 1; }
+        .active { display: flex; z-index: 10; }
+
+        .neon-text { text-shadow: 0 0 5px rgba(255,255,255,0.8), 0 0 10px currentColor; }
+
+        /* === UI 공통 === */
+        .navbar { width: 100%; padding: 15px; display: flex; justify-content: space-between; align-items: center; box-sizing: border-box; background: #222; border-bottom: 1px solid #333; z-index: 20;}
+        .btn-back { background: transparent; border: 1px solid #555; color: #ccc; padding: 5px 12px; border-radius: 5px; }
+        
+        .coin-display { 
+            font-size: 16px; color: #ffd700; font-weight: bold; 
+            background: rgba(0,0,0,0.8); padding: 8px 16px; border-radius: 20px; 
+            border: 1px solid #ffd700; display: inline-flex; align-items: center; gap: 8px;
+            box-shadow: 0 0 10px rgba(255, 215, 0, 0.3);
+        }
+
+        /* === 1. 메인 화면 === */
+        #main-screen { justify-content: center; background: radial-gradient(circle at center, #2c3e50, #000); }
+        .title { font-size: 36px; color: #f1c40f; margin-bottom: 30px; text-align: center; line-height: 1.3; font-weight: 800; text-shadow: 0 0 20px rgba(241, 196, 15, 0.6); }
+        
+        .menu-btn { 
+            width: 280px; padding: 18px; margin: 10px; font-size: 18px; border-radius: 12px; font-weight: bold; color: white; 
+            display: flex; justify-content: space-between; align-items: center; padding-left:25px; padding-right:25px;
+            transition: transform 0.1s; text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+        }
+        .menu-btn:active { transform: scale(0.98); }
+        
+        #my-relics { display: flex; gap: 8px; margin-bottom: 25px; flex-wrap: wrap; justify-content: center; min-height: 40px; }
+        .mini-relic { 
+            font-size: 20px; width: 40px; height: 40px; 
+            background: #333; border-radius: 50%; border: 2px solid #555; 
+            display: flex; justify-content: center; align-items: center; color: #aaa;
+        }
+
+        /* === [NEW] 스테이지 선택 화면 === */
+        #stage-screen { background: #1a1a1a; }
+        .stage-container { width: 100%; padding: 20px; overflow-y: auto; box-sizing: border-box; display: flex; flex-direction: column; gap: 20px; }
+        
+        .stage-card {
+            background: #252525; border-radius: 15px; overflow: hidden;
+            border: 1px solid #444; box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+            transition: transform 0.2s; cursor: pointer;
+        }
+        .stage-card:active { transform: scale(0.98); }
+        
+        .stage-img-box { width: 100%; height: 120px; overflow: hidden; position: relative; }
+        .stage-img-box img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.5s; }
+        
+        .stage-info { padding: 15px; display: flex; justify-content: space-between; align-items: center; }
+        .stage-title { font-size: 18px; font-weight: bold; color: white; margin-bottom: 5px; }
+        .stage-desc { font-size: 12px; color: #aaa; }
+        
+        .stage-badge { 
+            padding: 5px 10px; border-radius: 20px; font-size: 12px; font-weight: bold; 
+            background: #333; border: 1px solid #555;
+        }
+        .diff-easy { color: #2ecc71; border-color: #2ecc71; }
+        .diff-normal { color: #f1c40f; border-color: #f1c40f; }
+        .diff-hard { color: #e74c3c; border-color: #e74c3c; }
+
+
+        /* === 2. 게임 화면 === */
+        #game-area { position: relative; width: 100%; height: 50vh; background: #000; overflow: hidden; flex: 1; }
+        #target-img { width: 100%; height: 100%; object-fit: cover; filter: grayscale(100%); transition: filter 0.5s; }
+
+        .status-header { position: absolute; top: 10px; width: 94%; left: 3%; display: flex; justify-content: space-between; gap: 15px; z-index: 5; }
+        .bar-wrap { flex: 1; background: rgba(0,0,0,0.8); padding: 8px 12px; border-radius: 10px; border: 1px solid #444; backdrop-filter: blur(5px); }
+        .bar-bg { width: 100%; height: 8px; background: #333; margin-top: 6px; border-radius: 4px; overflow: hidden; }
+        .fill-restore { width: 0%; height: 100%; background: linear-gradient(90deg, #f1c40f, #f39c12); box-shadow: 0 0 10px #f1c40f; transition: width 0.3s; }
+        .fill-hp { width: 100%; height: 100%; background: linear-gradient(90deg, #e74c3c, #c0392b); box-shadow: 0 0 10px #e74c3c; transition: width 0.3s; }
+        .label { font-size: 12px; display: flex; justify-content: space-between; font-weight: bold; }
+
+        #crisis-panel { position: absolute; top: 80px; left: 50%; transform: translateX(-50%); width: 85%; background: rgba(100, 0, 0, 0.85); border: 2px solid #ff4444; border-radius: 12px; padding: 15px; text-align: center; display: none; animation: popIn 0.5s; z-index: 20; box-shadow: 0 0 30px rgba(255,0,0,0.3); backdrop-filter: blur(5px); }
+        .crisis-title { font-weight: bold; color: #ffcccc; font-size: 18px; margin-bottom: 5px; display:flex; align-items:center; justify-content:center; gap:8px;}
+        .crisis-hp-bg { width: 100%; height: 12px; background: #300; border-radius: 6px; overflow: hidden; margin-top: 10px; border: 1px solid #500; }
+        .crisis-hp-fill { width: 100%; height: 100%; background: #ff3333; transition: width 0.2s; box-shadow: 0 0 10px red; }
+
+        /* QTE 스타일 */
+        #qte-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 50; display: none; background: rgba(20, 0, 0, 0.6); }
+        .qte-warning-text { position: absolute; top: 20%; width: 100%; text-align: center; font-size: 32px; font-weight: 900; color: #ff3333; text-shadow: 0 0 20px red; animation: blink 0.2s infinite; pointer-events: none; letter-spacing: 2px; }
+        .qte-target { 
+            position: absolute; width: 100px; height: 100px; 
+            background: rgba(255,0,0,0.2); 
+            border: 3px solid #ff3333; border-radius: 50%; 
+            cursor: pointer; animation: pulse 0.5s infinite; 
+            display: flex; justify-content: center; align-items: center; 
+            color: white; box-shadow: 0 0 20px #ff0000; flex-direction: column;
+            backdrop-filter: blur(2px);
+        }
+        .qte-target i { font-size: 30px; margin-bottom: 5px; }
+        .qte-target span { font-size: 14px; font-weight: bold; }
+        
+        /* 카드 UI 패널 */
+        #ui-panel { height: 240px; flex: none; background: #1e1e1e; border-top: 2px solid #333; position: relative; display: flex; flex-direction: column; align-items: center; padding-top: 50px; }
+        
+        .energy-orb { 
+            position: absolute; top: -35px; left: 20px; 
+            width: 70px; height: 70px; 
+            background: linear-gradient(135deg, #3498db, #1abc9c); 
+            border: 4px solid #1e1e1e; border-radius: 50%; 
+            display: flex; justify-content: center; align-items: center; 
+            font-size: 26px; font-weight: bold; z-index: 30; 
+            box-shadow: 0 0 20px rgba(52, 152, 219, 0.6); color: white; flex-direction: column; line-height: 1;
+        }
+        .energy-label { font-size: 10px; font-weight: normal; opacity: 0.8; margin-top: 2px; }
+
+        .btn-turn { 
+            position: absolute; top: -25px; right: 20px; 
+            background: linear-gradient(135deg, #e67e22, #d35400); 
+            border: 4px solid #1e1e1e; color: white; padding: 10px 25px; 
+            border-radius: 30px; font-weight: bold; font-size: 16px;
+            box-shadow: 0 5px 15px rgba(230, 126, 34, 0.4); z-index: 30; display: flex; align-items: center; gap: 8px;
+        }
+
+        #hand-area { width: 100%; height: 100%; overflow-x: auto; display: flex; gap: 12px; padding: 0 15px; box-sizing: border-box; justify-content: center; align-items: center; }
+
+        .card { width: 95px; height: 140px; background: #2a2a2a; border-radius: 12px; border: 1px solid #444; color: white; display: flex; flex-direction: column; align-items: center; text-align: center; position: relative; flex-shrink: 0; transition: all 0.2s; box-shadow: 0 5px 15px rgba(0,0,0,0.5); }
+        .card:active { transform: scale(0.95); }
+        .card-cost { position: absolute; top: -10px; left: -10px; width: 28px; height: 28px; background: #3498db; color: white; border-radius: 50%; font-weight: bold; display: flex; justify-content: center; align-items: center; border: 2px solid #1e1e1e; font-size: 14px; }
+        .card-icon { font-size: 40px; margin-top: 25px; margin-bottom: 10px; }
+        .card-name { font-size: 12px; font-weight: bold; margin-bottom: 4px; color: #fff; }
+        .card-desc { font-size: 10px; color: #aaa; padding: 0 5px; line-height: 1.2; }
+        
+        .type-restore .card-icon { color: #2ecc71; text-shadow: 0 0 10px rgba(46, 204, 113, 0.5); }
+        .type-defend .card-icon { color: #3498db; text-shadow: 0 0 10px rgba(52, 152, 219, 0.5); }
+        .type-attack .card-icon { color: #e74c3c; text-shadow: 0 0 10px rgba(231, 76, 60, 0.5); }
+
+        #msg-float { position: absolute; top: 40%; width: 100%; text-align: center; font-size: 28px; font-weight: 900; text-shadow: 0 0 10px rgba(0,0,0,0.8); opacity: 0; pointer-events: none; z-index: 40; transition: all 0.5s; }
+
+        /* === 상점 UI === */
+        .shop-container { width: 100%; padding: 20px; overflow-y: auto; box-sizing: border-box; }
+        .relic-item { display: flex; align-items: center; background: #252525; margin-bottom: 15px; padding: 15px; border-radius: 15px; border: 1px solid #444; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
+        .relic-icon { font-size: 32px; margin-right: 15px; width: 50px; text-align: center; color: #f1c40f; text-shadow: 0 0 10px rgba(241, 196, 15, 0.3);}
+        .relic-info { flex: 1; }
+        .relic-name { font-size: 16px; font-weight: bold; color: #f1c40f; }
+        .relic-desc { font-size: 12px; color: #aaa; margin-top: 4px; }
+        .btn-buy { background: #27ae60; color: white; padding: 8px 15px; border-radius: 8px; font-weight: bold; min-width: 80px; transition: background 0.2s; }
+        .btn-buy.disabled { background: #444; color: #777; cursor: not-allowed; }
+        .btn-buy.owned { background: transparent; color: #f1c40f; border: 1px solid #f1c40f; }
+
+        /* === 도감 UI === */
+        #collection-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; padding: 15px; }
+
+        /* === 박물관 === */
+        .museum-stage { width: 100%; height: 100%; background: radial-gradient(circle, #444, #111); position: relative; overflow: hidden; display: flex; justify-content: center; align-items: center; }
+        .easel { position: relative; width: 180px; height: 240px; background: #5d4037; padding: 10px; border-radius: 8px; box-shadow: 0 20px 50px rgba(0,0,0,0.8); transform: translateY(-50px); z-index: 5; border: 4px solid #3e2723; }
+        .visitor-lane { position: absolute; bottom: 20px; width: 100%; height: 150px; display: flex; align-items: flex-end; z-index: 10; pointer-events: none; }
+        
+        .visitor { 
+            font-size: 40px; position: absolute; 
+            animation: rush 3s linear forwards; opacity: 0; white-space: nowrap; 
+            filter: drop-shadow(0 5px 5px rgba(0,0,0,0.5)); color: #ddd;
+        }
+        @keyframes rush { 
+            0% { left: -50px; opacity: 0; transform: scale(0.8); } 
+            10% { opacity: 1; } 
+            100% { left: 110%; opacity: 1; transform: scale(1); } 
+        }
+        
+        .report-box { position: absolute; top: 20px; width: 85%; background: rgba(30, 30, 30, 0.95); color: white; padding: 20px; border-radius: 15px; text-align: center; z-index: 20; border: 1px solid #555; box-shadow: 0 10px 30px rgba(0,0,0,0.5); backdrop-filter: blur(5px); }
+        .rank-S { box-shadow: 0 0 50px gold; border-color: gold; }
+
+    </style>
+</head>
+<body>
+
+    <div id="main-screen" class="screen active">
+        <div style="text-align:center;">
+            <div style="font-size:60px; margin-bottom:10px;">
+                <i class="fa-solid fa-landmark-dome neon-text" style="color:#f1c40f;"></i>
+            </div>
+            <h1 class="title">우리 문화유산<br>보호하기</h1>
+            
+            <div id="my-relics"></div>
+
+            <div class="coin-display">
+                <i class="fa-solid fa-coins"></i> <span id="main-gold">0</span> G
+            </div>
+        </div>
+
+        <div style="margin-top: 40px;">
+            <button class="menu-btn" style="background: linear-gradient(90deg, #c0392b, #e74c3c);" onclick="showScreen('stage-screen')">
+                <span><i class="fa-solid fa-map-location-dot"></i> 복원 작전</span> <span>▶</span>
+            </button>
+            <button class="menu-btn" style="background: linear-gradient(90deg, #27ae60, #2ecc71);" onclick="showScreen('collection-screen')">
+                <span><i class="fa-solid fa-book-open"></i> 유물 도감</span> <span>📦</span>
+            </button>
+            <button class="menu-btn" style="background: linear-gradient(90deg, #2980b9, #3498db);" onclick="showScreen('shop-screen')">
+                <span><i class="fa-solid fa-cart-shopping"></i> 장비 상점</span> <span>💰</span>
+            </button>
+        </div>
+        <p style="color:#555; font-size:12px; margin-top:30px;"><i class="fa-solid fa-circle-info"></i> 시연용: 시작 시 100G 지급</p>
+    </div>
+
+    <div id="stage-screen" class="screen">
+        <div class="navbar">
+            <button class="btn-back" onclick="showScreen('main-screen')"><i class="fa-solid fa-arrow-left"></i></button>
+            <div style="font-weight:bold;">작전 구역 선택</div>
+        </div>
+        <div class="stage-container" id="stage-list">
+            </div>
+    </div>
+
+    <div id="game-screen" class="screen">
+        <div id="game-area">
+            <img id="target-img" src="">
+            
+            <div class="status-header">
+                <div class="bar-wrap">
+                    <div class="label"><span style="color:#f1c40f"><i class="fa-solid fa-star"></i> 복원도</span> <span id="txt-restore">0%</span></div>
+                    <div class="bar-bg"><div id="bar-restore" class="fill-restore"></div></div>
+                </div>
+                <div class="bar-wrap">
+                    <div class="label"><span style="color:#e74c3c"><i class="fa-solid fa-heart"></i> 내구도</span> <span id="txt-hp">100</span></div>
+                    <div class="bar-bg"><div id="bar-hp" class="fill-hp"></div></div>
+                </div>
+            </div>
+
+            <div id="crisis-panel">
+                <div class="crisis-title"><i class="fa-solid fa-triangle-exclamation"></i> 위기: <span id="crisis-name"></span></div>
+                <div class="crisis-desc">방해 요소를 먼저 제거하세요!</div>
+                <div class="crisis-hp-bg"><div id="crisis-bar" class="crisis-hp-fill"></div></div>
+                <div style="font-size:11px; margin-top:5px; color:#aaa; font-weight:bold;">남은 피해량: <span id="crisis-hp-txt"></span></div>
+            </div>
+
+            <div id="qte-overlay">
+                <div class="qte-warning-text">긴급 상황!</div>
+            </div>
+
+            <div id="msg-float"></div>
+        </div>
+
+        <div id="ui-panel">
+            <div class="energy-orb">
+                <span id="txt-energy">3</span>
+                <span class="energy-label">AP</span>
+            </div>
+            
+            <button class="btn-turn" onclick="endTurn()">
+                턴 종료 <i class="fa-solid fa-forward"></i>
+            </button>
+            
+            <div id="hand-area"></div>
+        </div>
+    </div>
+
+    <div id="shop-screen" class="screen">
+        <div class="navbar">
+            <button class="btn-back" onclick="showScreen('main-screen')"><i class="fa-solid fa-arrow-left"></i></button>
+            <div class="coin-display"><i class="fa-solid fa-coins"></i> <span id="shop-gold">0</span></div>
+        </div>
+        <div id="shop-list" class="shop-container"></div>
+    </div>
+
+    <div id="collection-screen" class="screen">
+        <div class="navbar">
+            <button class="btn-back" onclick="showScreen('main-screen')"><i class="fa-solid fa-arrow-left"></i></button>
+            <div style="font-weight:bold;"><i class="fa-solid fa-layer-group"></i> 보유 카드: <span id="collection-count">0</span></div>
+        </div>
+        <div id="collection-grid"></div>
+    </div>
+
+    <div id="museum-screen" class="screen">
+        <div class="museum-stage">
+            <div class="easel" id="easel-box">
+                <img id="museum-img" src="">
+                <div class="rank-badge" id="museum-rank">S</div>
+            </div>
+            
+            <div class="report-box">
+                <h3 style="margin:0; color:#f1c40f;"><i class="fa-solid fa-clipboard-check"></i> 복원 완료!</h3>
+                <p id="visitor-log" style="font-size:13px; color:#ccc; margin:10px 0;">관람객들이 입장하고 있습니다...</p>
+                <div style="font-size:22px; font-weight:bold; color:#2ecc71;">
+                    수익: +<span id="museum-income">0</span> G
+                </div>
+                <button class="menu-btn" style="background:#444; width:100%; padding:10px; margin:15px 0 0 0; font-size:14px; box-shadow:none; border:1px solid #666;" onclick="showScreen('main-screen')">
+                    메인으로 돌아가기
+                </button>
+            </div>
+
+            <div class="visitor-lane" id="visitor-lane"></div>
+        </div>
+    </div>
+
+<script>
+    // === [NEW] 스테이지 데이터 ===
+    const STAGE_DB = [
+        { id: 0, name: "안양 만안교", img: "images/만안교.jpg", diff: "easy", desc: "정조대왕의 효심이 깃든 다리입니다." },
+        { id: 1, name: "중초사지 당간지주", img: "images/당간지주.jpg", diff: "normal", desc: "보물 제4호. 사찰의 깃발을 지탱했습니다." },
+        { id: 2, name: "안양사 귀부", img: "images/귀부.jpg", diff: "hard", desc: "거북이 모양의 비석 받침돌입니다." }
+    ];
+
+    let currentStage = 0; // 현재 선택된 스테이지 ID
+
+    // === 1. 데이터 관리 ===
+    let gameData = JSON.parse(localStorage.getItem('anyangStage')) || {
+        gold: 0,
+        relics: [],
+        collection: []
+    };
+
+    function saveData() {
+        localStorage.setItem('anyangStage', JSON.stringify(gameData));
+        updateAllUI();
+    }
+
+    const RELIC_DB = [
+        { id: 'glasses', name: '정조대왕 안경', icon: '<i class="fa-solid fa-glasses"></i>', desc: '복원 효과 20% 증가', price: 500 },
+        { id: 'battery', name: '도깨비 배터리', icon: '<i class="fa-solid fa-battery-full"></i>', desc: '매 턴 에너지 +1', price: 1000 },
+        { id: 'shield', name: '무지개 보호막', icon: '<i class="fa-solid fa-shield-halved"></i>', desc: '내구도 피해 5 감소', price: 400 },
+        { id: 'pouch', name: '비단 주머니', icon: '<i class="fa-solid fa-sack-dollar"></i>', desc: '관람 수익 +50%', price: 300 }
+    ];
+
+    const CRISIS_DB = [
+        { name: "대홍수", hp: 40, dmg: 15, desc: "물살이 거셉니다!" },
+        { name: "석재 도난", hp: 30, dmg: 10, desc: "돌을 지키세요!" },
+        { name: "강제 철거", hp: 60, dmg: 20, desc: "공사를 막으세요!" }
+    ];
+
+    const DECK = [
+        { name: "이끼 제거", cost: 1, val: 10, type: "restore", icon: '<i class="fa-solid fa-broom"></i>' },
+        { name: "이끼 제거", cost: 1, val: 10, type: "restore", icon: '<i class="fa-solid fa-broom"></i>' },
+        { name: "정밀 보수", cost: 1, val: 15, type: "restore", icon: '<i class="fa-solid fa-wand-magic-sparkles"></i>' },
+        { name: "석재 보강", cost: 2, val: 0, type: "defend", icon: '<i class="fa-solid fa-shield-cat"></i>', desc: "내구도 +20" },
+        { name: "배수 작업", cost: 2, val: 30, type: "attack", icon: '<i class="fa-solid fa-water"></i>', desc: "위기 해결 특화" },
+        { name: "긴급 복구", cost: 3, val: 40, type: "restore", icon: '<i class="fa-solid fa-hammer"></i>' }
+    ];
+
+    function hasRelic(id) { return gameData.relics.includes(id); }
+
+    // === 2. 게임 변수 ===
+    let energy = 3, maxEnergy = 3, restore = 0, durability = 100, turn = 1;
+    let crisis = null;
+
+    // === 3. 화면 관리 ===
+    function showScreen(id) {
+        document.querySelectorAll('.screen').forEach(el => el.classList.remove('active'));
+        document.getElementById(id).classList.add('active');
+        if(id === 'stage-screen') renderStages();
+        if(id === 'shop-screen') renderShop();
+        if(id === 'collection-screen') renderCollection();
+        updateAllUI();
+    }
+
+    function updateAllUI() {
+        document.getElementById('main-gold').innerText = gameData.gold;
+        document.getElementById('shop-gold').innerText = gameData.gold;
+        const div = document.getElementById('my-relics');
+        div.innerHTML = "";
+        gameData.relics.forEach(id => {
+            const r = RELIC_DB.find(x => x.id === id);
+            if(r) div.innerHTML += `<div class="mini-relic" title="${r.name}">${r.icon}</div>`;
+        });
+    }
+
+    // === [NEW] 스테이지 렌더링 ===
+    function renderStages() {
+        const list = document.getElementById('stage-list');
+        list.innerHTML = "";
+        
+        STAGE_DB.forEach(stage => {
+            let badgeClass = stage.diff === 'easy' ? 'diff-easy' : (stage.diff === 'normal' ? 'diff-normal' : 'diff-hard');
+            let diffText = stage.diff === 'easy' ? '초급' : (stage.diff === 'normal' ? '중급' : '고급');
+            
+            list.innerHTML += `
+            <div class="stage-card" onclick="startGame(${stage.id})">
+                <div class="stage-img-box">
+                    <img src="${stage.img}" onerror="this.src='https://via.placeholder.com/300?text=No+Image'">
+                </div>
+                <div class="stage-info">
+                    <div>
+                        <div class="stage-title">${stage.name}</div>
+                        <div class="stage-desc">${stage.desc}</div>
+                    </div>
+                    <div class="stage-badge ${badgeClass}">${diffText}</div>
+                </div>
+            </div>`;
+        });
+    }
+
+    // === 4. 게임 로직 (수정됨) ===
+    function startGame(stageId) {
+        currentStage = stageId;
+        const stageInfo = STAGE_DB.find(s => s.id === stageId);
+
+        gameData.gold += 100; saveData();
+        maxEnergy = hasRelic('battery') ? 4 : 3;
+        restore = 0; durability = 100; turn = 1; crisis = null;
+        
+        // 이미지 설정
+        document.getElementById('target-img').src = stageInfo.img;
+        document.getElementById('target-img').style.filter = "grayscale(100%) blur(5px)";
+        
+        document.getElementById('crisis-panel').style.display = "none";
+        document.getElementById('qte-overlay').style.display = "none";
+
+        showScreen('game-screen');
+        startTurn();
+    }
+
+    function startTurn() {
+        energy = maxEnergy;
+        renderGameUI();
+        drawCards();
+        floatMsg(`Turn ${turn}`, "#fff");
+
+        if (!crisis && turn > 1 && Math.random() < 0.4) spawnCrisis();
+        if (Math.random() < 0.3) setTimeout(triggerQTE, 1000);
+    }
+
+    function endTurn() {
+        let dmg = 5;
+        if (crisis) {
+            dmg = crisis.dmg;
+            floatMsg(`${crisis.name} 피해! -${dmg}`, "#e74c3c");
+        } else {
+            floatMsg(`자연 풍화 -${dmg}`, "#aaa");
+        }
+        if(hasRelic('shield')) dmg = Math.max(0, dmg - 5);
+        durability -= dmg;
+        turn++;
+        if (checkGameOver()) return;
+        renderGameUI();
+        setTimeout(startTurn, 1000);
+    }
+
+    function playCard(data, el) {
+        if(energy < data.cost) { floatMsg("에너지 부족!", "#e74c3c"); return; }
+        energy -= data.cost;
+
+        if (crisis) {
+            let dmg = data.val;
+            if(data.type === "attack") dmg *= 2;
+            crisis.hp -= dmg;
+            floatMsg(`위기 대처! -${dmg}`, "#f1c40f");
+            if (crisis.hp <= 0) {
+                crisis = null;
+                floatMsg("위기 해결!", "#2ecc71");
+            }
+            updateCrisisUI();
+        } else {
+            if (data.type === "restore") {
+                let val = data.val;
+                if(hasRelic('glasses')) val = Math.floor(val * 1.2);
+                restore += val;
+                floatMsg(`+${val}% 복원`, "#2ecc71");
+            } else if (data.type === "defend") {
+                durability += 20;
+                floatMsg(`+20 내구도`, "#3498db");
+            }
+        }
+        if(restore > 100) restore = 100;
+        if(durability > 100) durability = 100;
+        
+        el.style.opacity = 0; 
+        el.style.transform = "translateY(-50px)";
+        setTimeout(() => el.remove(), 200);
+        renderGameUI();
+        if(!checkGameOver() && restore >= 100) gameWin();
+    }
+
+    function spawnCrisis() {
+        const data = CRISIS_DB[Math.floor(Math.random() * CRISIS_DB.length)];
+        crisis = { ...data, maxHp: data.hp };
+        document.getElementById('crisis-name').innerText = data.name;
+        document.getElementById('crisis-panel').style.display = "block";
+        updateCrisisUI();
+        floatMsg("⚠️ 위기 발생!", "#e74c3c");
+    }
+
+    function updateCrisisUI() {
+        if(!crisis) { document.getElementById('crisis-panel').style.display = "none"; return; }
+        const pct = (crisis.hp / crisis.maxHp) * 100;
+        document.getElementById('crisis-bar').style.width = pct + "%";
+        document.getElementById('crisis-hp-txt').innerText = crisis.hp;
+    }
+
+    function triggerQTE() {
+        const overlay = document.getElementById('qte-overlay');
+        overlay.style.display = "block";
+        
+        const t = document.createElement('div');
+        t.className = "qte-target"; 
+        t.innerHTML = "<i class='fa-solid fa-hand-pointer' style='font-size:30px; margin-bottom:5px;'></i><div>TOUCH</div>";
+        t.style.top = (20 + Math.random()*50)+"%"; 
+        t.style.left = (20 + Math.random()*60)+"%";
+        
+        let clicked = false;
+        t.onclick = () => {
+            clicked = true; energy++; floatMsg("⚡ 위기 모면!", "#f1c40f");
+            overlay.style.display = "none"; renderGameUI();
+        };
+        overlay.appendChild(t);
+        setTimeout(() => {
+            if(!clicked) { durability-=10; floatMsg("💥 피해 발생! -10", "#e74c3c"); overlay.style.display="none"; checkGameOver(); renderGameUI(); }
+        }, 2000);
+    }
+
+    function drawCards() {
+        const hand = document.getElementById('hand-area');
+        hand.innerHTML = "";
+        for(let i=0; i<4; i++) {
+            const d = DECK[Math.floor(Math.random()*DECK.length)];
+            const el = document.createElement('div');
+            el.className = `card type-${d.type}`;
+            el.innerHTML = `
+                <div class="card-cost">${d.cost}</div>
+                <div class="card-icon">${d.icon}</div>
+                <div class="card-name">${d.name}</div>
+                <div class="card-desc">${d.desc||'위력 '+d.val}</div>
+            `;
+            el.onclick = () => playCard(d, el);
+            hand.appendChild(el);
+        }
+    }
+
+    function renderGameUI() {
+        document.getElementById('txt-energy').innerText = energy;
+        document.getElementById('txt-restore').innerText = restore + "%";
+        document.getElementById('txt-hp').innerText = durability;
+        document.getElementById('bar-restore').style.width = restore + "%";
+        document.getElementById('bar-hp').style.width = durability + "%";
+        const g = 100 - restore;
+        document.getElementById('target-img').style.filter = `grayscale(${g}%) blur(${g/20}px)`;
+    }
+
+    function checkGameOver() {
+        if(durability <= 0) { alert("유물이 파괴되었습니다."); showScreen('main-screen'); return true; }
+        return false;
+    }
+
+    function floatMsg(txt, color="white") {
+        const el = document.getElementById('msg-float');
+        el.innerText = txt; el.style.color = color; el.style.textShadow = `0 0 10px ${color}`;
+        el.style.opacity = 1; el.style.top = "40%";
+        setTimeout(() => { el.style.opacity = 0; el.style.top = "30%"; }, 800);
+    }
+
+    // === 5. 박물관 ===
+    function gameWin() {
+        showScreen('museum-screen');
+        let rank = durability >= 80 ? 'S' : (durability >= 50 ? 'A' : (durability >= 30 ? 'B' : 'C'));
+        
+        const easel = document.getElementById('easel-box');
+        // 현재 스테이지 이미지 사용
+        const stageInfo = STAGE_DB.find(s => s.id === currentStage);
+        document.getElementById('museum-img').src = stageInfo.img;
+        document.getElementById('museum-rank').innerText = rank;
+        easel.className = rank === 'S' ? 'easel rank-S' : 'easel';
+
+        gameData.collection.push({ rank: rank, date: new Date().toLocaleDateString() });
+        saveData();
+
+        const lane = document.getElementById('visitor-lane'); lane.innerHTML = "";
+        let count = 0, speed = 4;
+        
+        if(rank === 'C') count = 2;
+        else if(rank === 'B') count = 8;
+        else if(rank === 'A') count = 20;
+        else if(rank === 'S') { count = 100; speed = 2; }
+
+        const visitorIcons = [
+            '<i class="fa-solid fa-person"></i>',
+            '<i class="fa-solid fa-person-dress"></i>',
+            '<i class="fa-solid fa-child"></i>',
+            '<i class="fa-solid fa-user-tie"></i>',
+            '<i class="fa-solid fa-user-graduate"></i>',
+            '<i class="fa-solid fa-camera"></i>'
+        ];
+        if(rank === 'S') visitorIcons.push('<i class="fa-solid fa-chess-king" style="color:gold; filter:drop-shadow(0 0 5px orange);"></i>');
+
+        for(let i=0; i<count; i++) {
+            setTimeout(() => {
+                const el = document.createElement('div'); el.className = 'visitor'; 
+                el.innerHTML = visitorIcons[Math.floor(Math.random() * visitorIcons.length)];
+                el.style.bottom = (Math.random() * 20) + "px";
+                el.style.zIndex = Math.floor(Math.random() * 10);
+                el.style.animationDuration = (speed + Math.random()) + "s";
+                
+                const colors = ['#ddd', '#aaa', '#888', '#fff'];
+                if(!el.innerHTML.includes('gold')) el.style.color = colors[Math.floor(Math.random()*colors.length)];
+
+                lane.appendChild(el);
+            }, i * (rank === 'S' ? 50 : 800));
+        }
+
+        let baseIncome = rank==='S'? 500 : (rank==='A'? 300 : (rank==='B'? 100 : 30));
+        if(hasRelic('pouch')) baseIncome = Math.floor(baseIncome * 1.5);
+        
+        document.getElementById('museum-income').innerText = baseIncome;
+        document.getElementById('visitor-log').innerText = rank==='S' ? "관람객들이 구름처럼 몰려옵니다!" : "관람객들이 입장합니다.";
+        setTimeout(() => { gameData.gold += baseIncome; saveData(); }, 2000);
+    }
+
+    function renderShop() {
+        const list = document.getElementById('shop-list'); list.innerHTML = "";
+        RELIC_DB.forEach(item => {
+            const owned = hasRelic(item.id);
+            const btnClass = owned ? "btn-buy owned" : (gameData.gold >= item.price ? "btn-buy" : "btn-buy disabled");
+            list.innerHTML += `
+                <div class="relic-item">
+                    <div class="relic-icon">${item.icon}</div>
+                    <div class="relic-info"><div class="relic-name">${item.name}</div><div class="relic-desc">${item.desc}</div></div>
+                    <button class="${btnClass}" onclick="buyRelic('${item.id}', ${item.price})">${owned?'보유중':item.price+'G'}</button>
+                </div>`;
+        });
+    }
+
+    function buyRelic(id, price) {
+        if(hasRelic(id)) return;
+        if(gameData.gold >= price) {
+            gameData.gold -= price; gameData.relics.push(id);
+            alert("구매 성공!"); saveData(); renderShop();
+        } else alert("골드가 부족합니다.");
+    }
+
+    function renderCollection() {
+        const grid = document.getElementById('collection-grid');
+        document.getElementById('collection-count').innerText = gameData.collection.length;
+        grid.innerHTML = "";
+        [...gameData.collection].reverse().forEach(item => {
+            let color = item.rank==='S'?"gold":(item.rank==='A'?"#2ecc71":(item.rank==='B'?"#3498db":"#bdc3c7"));
+            grid.innerHTML += `
+                <div style="background:#252525; border-radius:12px; padding:10px; text-align:center; border:1px solid ${color};">
+                    <div style="height:70px; background:#111; border-radius:8px; margin-bottom:8px; overflow:hidden;">
+                        <i class="fa-solid fa-image" style="font-size:30px; color:#333; line-height:70px;"></i>
+                    </div>
+                    <div style="font-weight:bold; color:${color}">${item.rank}급</div>
+                </div>`;
+        });
+    }
+
+    updateAllUI();
+
+</script>
+</body>
+</html>

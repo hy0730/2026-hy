@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>안양 문화유산 탐험대 AR</title>
+    <style>
+        body {
+            background-color: #222;
+            color: white;
+            font-family: 'Pretendard', sans-serif;
+            margin: 0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            overflow: hidden;
+        }
+
+        /* === 1. 탐색 모드 (GPS 화면) === */
+        #exploration-screen {
+            width: 100%; height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(rgba(0,0,0,0.7), rgba(0,0,0,0.7)), url('https://upload.wikimedia.org/wikipedia/commons/thumb/d/d6/Manan_bridge.JPG/640px-Manan_bridge.JPG');
+            background-size: cover;
+            background-position: center;
+        }
+
+        .radar {
+            width: 200px; height: 200px;
+            border: 4px solid #00ff88;
+            border-radius: 50%;
+            position: relative;
+            animation: pulse 2s infinite;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(0, 255, 136, 0.7); }
+            70% { box-shadow: 0 0 0 50px rgba(0, 255, 136, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(0, 255, 136, 0); }
+        }
+
+        .distance-box {
+            background: rgba(0, 0, 0, 0.8);
+            padding: 20px;
+            border-radius: 15px;
+            text-align: center;
+            border: 2px solid #00ff88;
+        }
+        
+        #btn-camera {
+            margin-top: 20px;
+            padding: 15px 30px;
+            font-size: 20px;
+            background: #ff4757;
+            color: white;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            display: none; /* 근처에 가면 보임 */
+            animation: bounce 1s infinite;
+        }
+
+        @keyframes bounce { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.1); } }
+
+        /* === 2. 복원 모드 (게임 화면) === */
+        #restore-screen {
+            display: none; /* 처음엔 숨김 */
+            width: 100%; height: 100%;
+            flex-direction: column;
+            background: #333;
+        }
+
+        #artifact-wrapper {
+            position: relative;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        #target-img {
+            width: 100%; height: 100%;
+            object-fit: cover;
+            filter: grayscale(100%) blur(5px) brightness(0.5); /* 훼손 효과 */
+            transition: filter 0.3s;
+        }
+
+        #ui-panel {
+            height: 250px;
+            background: white;
+            color: black;
+            border-top-left-radius: 20px;
+            border-top-right-radius: 20px;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .tools { display: flex; justify-content: space-around; margin-top: 20px; }
+        .tool-btn {
+            width: 70px; height: 70px;
+            border-radius: 50%;
+            border: 2px solid #333;
+            background: white;
+            font-size: 30px;
+        }
+        .hp-bar-bg { width: 100%; height: 15px; background: #ddd; border-radius: 10px; margin-top: 10px; overflow: hidden;}
+        .hp-bar-fill { width: 0%; height: 100%; background: linear-gradient(90deg, orange, green); transition: width 0.2s; }
+
+    </style>
+</head>
+<body>
+
+    <div id="exploration-screen">
+        <div class="radar">
+            <span style="font-size: 50px;">📍</span>
+        </div>
+        
+        <div class="distance-box">
+            <h2 style="margin:0;">목표: 안양 만안교</h2>
+            <p style="color:#aaa; margin:5px 0;">조선시대 정조대왕의 효심이 깃든 다리</p>
+            <h1 id="distance-txt" style="font-size: 40px; color:#00ff88; margin:10px 0;">거리 계산중...</h1>
+            <p id="status-txt">위치 신호를 찾고 있습니다...</p>
+        </div>
+
+        <button id="btn-camera" onclick="openCamera()">📸 유물 발견! 촬영하기</button>
+
+        <button onclick="forceFound()" style="margin-top:50px; opacity:0.5; background:none; color:white; border:1px solid white;">[개발자용] 강제 발견 테스트</button>
+    </div>
+
+    <input type="file" id="camera-input" accept="image/*" capture="environment" style="display:none;">
+
+
+    <div id="restore-screen">
+        <div id="artifact-wrapper">
+            <img id="target-img" src="" alt="유물 사진">
+        </div>
+
+        <div id="ui-panel">
+            <div style="display:flex; justify-content:space-between;">
+                <strong>🛠️ 복원 진행도</strong>
+                <span id="percent-txt">0%</span>
+            </div>
+            <div class="hp-bar-bg"><div id="hp-bar" class="hp-bar-fill"></div></div>
+            
+            <p id="msg-txt" style="color:gray; font-size:14px;">촬영한 유물을 도구로 닦아주세요!</p>
+
+            <div class="tools">
+                <button class="tool-btn" onclick="restoreAction(10)">🧹</button>
+                <button class="tool-btn" onclick="restoreAction(15)">🔨</button>
+                <button class="tool-btn" onclick="restoreAction(20)">✨</button>
+            </div>
+        </div>
+    </div>
+
+<script>
+    // === 1. GPS 설정 (안양 만안교 좌표) ===
+    const TARGET_LAT = 37.4019; // 만안교 위도 (예시)
+    const TARGET_LNG = 126.9223; // 만안교 경도
+    const UNLOCK_DISTANCE = 50; // 50m 이내 접근 시 해금
+
+    const distTxt = document.getElementById('distance-txt');
+    const statusTxt = document.getElementById('status-txt');
+    const btnCamera = document.getElementById('btn-camera');
+
+    // 위치 추적 시작
+    if (navigator.geolocation) {
+        navigator.geolocation.watchPosition(updatePosition, handleError, {
+            enableHighAccuracy: true
+        });
+    } else {
+        distTxt.innerText = "GPS 지원 불가";
+    }
+
+    function updatePosition(position) {
+        const userLat = position.coords.latitude;
+        const userLng = position.coords.longitude;
+        
+        // 거리 계산 (Haversine 공식)
+        const dist = getDistanceFromLatLonInM(userLat, userLng, TARGET_LAT, TARGET_LNG);
+        
+        // 화면 표시
+        if (dist > 1000) {
+            distTxt.innerText = (dist / 1000).toFixed(1) + " km";
+        } else {
+            distTxt.innerText = Math.floor(dist) + " m";
+        }
+
+        // 거리별 반응
+        if (dist <= UNLOCK_DISTANCE) {
+            statusTxt.innerText = "목표 지점에 도착했습니다!";
+            statusTxt.style.color = "#00ff88";
+            btnCamera.style.display = "block"; // 버튼 등장
+        } else {
+            statusTxt.innerText = "목표를 향해 이동하세요.";
+            btnCamera.style.display = "none";
+        }
+    }
+
+    function handleError(error) {
+        statusTxt.innerText = "위치 정보를 가져올 수 없습니다.";
+    }
+
+    // 거리 계산 수학 공식 (미터 단위)
+    function getDistanceFromLatLonInM(lat1, lon1, lat2, lon2) {
+        var R = 6371000; // 지구 반지름 (미터)
+        var dLat = deg2rad(lat2 - lat1);
+        var dLon = deg2rad(lon2 - lon1);
+        var a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat1)) *
+                Math.sin(dLon/2) * Math.sin(dLon/2);
+        var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        var d = R * c;
+        return d;
+    }
+    function deg2rad(deg) { return deg * (Math.PI/180); }
+
+
+    // === 2. 카메라 촬영 및 연동 ===
+    const cameraInput = document.getElementById('camera-input');
+    const imgEl = document.getElementById('target-img');
+    
+    function openCamera() {
+        cameraInput.click(); // 숨겨진 파일 인풋 클릭
+    }
+    
+    // 개발자용 강제 실행 (집에서 테스트할 때)
+    function forceFound() {
+        alert("테스트 모드: 강제로 카메라를 켭니다.");
+        openCamera();
+    }
+
+    // 사진을 찍거나 선택했을 때
+    cameraInput.addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(evt) {
+                // 찍은 사진을 게임 이미지로 설정
+                imgEl.src = evt.target.result;
+                
+                // 화면 전환 (탐색 -> 복원)
+                document.getElementById('exploration-screen').style.display = 'none';
+                document.getElementById('restore-screen').style.display = 'flex';
+                
+                alert("📷 유물 확보 완료!\n훼손된 유물을 복원해주세요!");
+            };
+            reader.readAsDataURL(file);
+        }
+    });
+
+
+    // === 3. 복원 게임 로직 (아까 그 코드 연동) ===
+    let restoration = 0;
+    const hpBar = document.getElementById('hp-bar');
+    const percentTxt = document.getElementById('percent-txt');
+    const msgTxt = document.getElementById('msg-txt');
+
+    function restoreAction(amount) {
+        if (restoration >= 100) return;
+
+        restoration += amount;
+        if (restoration > 100) restoration = 100;
+
+        // 시각 효과: 흑백/흐림 -> 컬러/선명
+        const gray = 100 - restoration;
+        const blur = (100 - restoration) / 10; // 최대 10px 블러
+        const bright = 0.5 + (restoration / 200); // 0.5 -> 1.0
+
+        imgEl.style.filter = `grayscale(${gray}%) blur(${blur}px) brightness(${bright})`;
+        
+        hpBar.style.width = restoration + "%";
+        percentTxt.innerText = restoration + "%";
+        msgTxt.innerText = "역사의 색을 되찾고 있습니다...";
+
+        if (restoration >= 100) {
+            msgTxt.innerText = "복원 완료! 역사를 지켜냈습니다!";
+            msgTxt.style.color = "green";
+            setTimeout(() => alert("🎉 미션 성공! 🎉\n안양 만안교의 복원을 완료했습니다.\n\n(다음 유물 위치가 지도에 표시됩니다)"), 500);
+        }
+    }
+
+</script>
+</body>
+</html>

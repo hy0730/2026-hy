@@ -1,0 +1,216 @@
+/* =========================================
+   1. 글로벌 리셋 및 레트로 테마 설정
+   ========================================= */
+@import url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_2001@1.1/DungGeunMo.css');
+
+:root {
+    --gold: #ffd700;
+    --gold-glow: rgba(255, 215, 0, 0.4);
+    --blue: #00d4ff;
+    --blue-glow: rgba(0, 212, 255, 0.3);
+    --red: #e74c3c;
+    --bg-dark: #121212;
+    --box-bg: rgba(18, 18, 22, 0.96);
+    --locked: grayscale(100%) blur(1px) brightness(0.5);
+    --retro-shadow: 4px 4px 0px rgba(0,0,0,0.9);
+    --border-pixel: 3px solid #333;
+}
+
+* {
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+    touch-action: manipulation;
+    /* 레트로 느낌을 위한 픽셀 보간 강제 */
+    image-rendering: pixelated;
+}
+
+body, html {
+    margin: 0; padding: 0;
+    width: 100%; height: 100%;
+    background-color: #000; /* 완전 블랙으로 대비 상승 */
+    color: #fff;
+    font-family: 'DungGeunMo', sans-serif;
+    overflow: hidden;
+}
+
+/* 스크롤바 전체 디자인 커스텀 */
+::-webkit-scrollbar { width: 8px; }
+::-webkit-scrollbar-track { background: #1a1a1a; }
+::-webkit-scrollbar-thumb { background: #444; border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: var(--blue); }
+
+/* =========================================
+   2. 메인 레이아웃 및 헤더 UI
+   ========================================= */
+#main-app { display: flex; flex-direction: column; width: 100vw; height: 100vh; }
+
+header {
+    height: 60px; background: rgba(0,0,0,0.92);
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 0 20px; border-bottom: 4px double var(--gold); /* 더블 라인으로 고급화 */
+    z-index: 100;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.8);
+}
+
+.logo { 
+    font-size: 1.1rem; color: var(--gold); 
+    text-shadow: 2px 2px 0px #000, 0 0 10px var(--gold-glow); 
+}
+
+.header-controls { display: flex; gap: 12px; align-items: center; }
+
+.btn-mute {
+    background: #222; border: 1px solid var(--gold); color: var(--gold);
+    padding: 6px 12px; border-radius: 4px; font-family: 'DungGeunMo'; 
+    font-size: 0.8rem; cursor: pointer; transition: all 0.1s;
+}
+.btn-mute:active { transform: scale(0.92); background: var(--gold); color: #000; }
+
+.progress-badge { 
+    border: 1px solid var(--gold); padding: 5px 15px; 
+    border-radius: 20px; font-size: 0.85rem; 
+    background: rgba(255, 215, 0, 0.1);
+    box-shadow: inset 0 0 5px var(--gold-glow);
+}
+
+/* =========================================
+   3. 지도 및 마커 (애니메이션 강화)
+   ========================================= */
+#map-container { 
+    flex: 1; position: relative; 
+    background: #000; overflow: hidden; 
+}
+
+#temp-map { 
+    width: 100%; height: 100%; 
+    object-fit: cover; opacity: 0.55; /* 마커 집중도를 위해 불투명도 조절 */
+    transition: opacity 1s, filter 1s;
+}
+
+#marker-layer { position: absolute; inset: 0; z-index: 10; }
+
+.marker {
+    position: absolute; width: 80px; height: 100px;
+    display: flex; flex-direction: column; align-items: center;
+    cursor: pointer; pointer-events: auto; 
+    transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.3s;
+}
+
+/* [추가] 활성화된(가야 할) 마커에 맥박 효과 부여 */
+.marker.active { animation: markerPulse 2s infinite; }
+@keyframes markerPulse {
+    0% { transform: scale(1); filter: drop-shadow(0 0 2px var(--gold)); }
+    50% { transform: scale(1.08); filter: drop-shadow(0 0 12px var(--gold)); }
+    100% { transform: scale(1); filter: drop-shadow(0 0 2px var(--gold)); }
+}
+
+.marker:active { transform: scale(0.9); }
+
+.marker img { 
+    width: 60px; height: 60px; object-fit: contain; 
+    filter: drop-shadow(0 4px 4px rgba(0,0,0,0.8)); 
+}
+
+.marker .label {
+    margin-top: 6px; font-size: 11px; background: rgba(0,0,0,0.9);
+    padding: 4px 10px; border-radius: 4px; 
+    border: 1px solid var(--gold-glow);
+    color: #fff; white-space: nowrap;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.5);
+}
+
+.marker.locked { filter: var(--locked); opacity: 0.5; cursor: not-allowed; }
+
+.marker.visited::after {
+    content: 'OK'; /* 체크 표시 대신 OK 문구로 레트로 감성 */
+    position: absolute; top: -5px; right: 8px;
+    background: var(--blue); color: #000; width: 24px; height: 24px;
+    border-radius: 4px; display: flex; align-items: center; justify-content: center;
+    font-weight: bold; border: 2px solid #000; font-size: 10px;
+    box-shadow: 2px 2px 0 rgba(0,0,0,0.5);
+}
+
+/* =========================================
+   4. 하단 및 플로팅 버튼 (Juice 강화)
+   ========================================= */
+footer { 
+    height: 50px; background: #0a0a0a; border-top: 2px solid #222;
+    display: flex; align-items: center; justify-content: center; 
+}
+
+#guide-text { 
+    font-size: 0.85rem; color: #aaa; 
+    text-shadow: 1px 1px 0px #000;
+}
+
+.btn-round { 
+    background: var(--blue); border: 2px solid #000; padding: 12px 22px; 
+    border-radius: 4px; /* 둥근 버튼보다 각진 레트로 버튼 권장 */
+    color: #fff; font-family: 'DungGeunMo'; 
+    cursor: pointer; box-shadow: var(--retro-shadow); 
+    transition: transform 0.1s, box-shadow 0.1s;
+}
+.btn-round:active { transform: translate(3px, 3px); box-shadow: 1px 1px 0px rgba(0,0,0,0.9); }
+
+.btn-reset { 
+    background: #1a1a1a; color: #666; border: 2px solid #333;
+}
+.btn-reset:hover { border-color: var(--red); color: var(--red); }
+
+/* =========================================
+   5. 오버레이 & 연출 (CRT 느낌 추가)
+   ========================================= */
+.overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.96);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    z-index: 2000; transition: opacity 0.6s ease; padding: 25px;
+}
+
+#intro-text { 
+    max-width: 550px; line-height: 1.9; color: #00ff41; /* 매트릭스 그린 */
+    font-size: 1.15rem; text-shadow: 0 0 8px rgba(0,255,65,0.4);
+}
+
+/* 깜빡임 애니메이션 개선 */
+@keyframes pulse { 0%, 100% { opacity: 0.3; } 50% { opacity: 1; } }
+
+.certificate-css { 
+    background: #f4ecd8; border: 10px double #8d6e63; 
+    color: #2c1e1a; box-shadow: 0 0 50px rgba(0,0,0,0.8), 10px 10px 0 rgba(0,0,0,0.2);
+}
+
+/* =========================================
+   6. 모달 및 유저 기록 (데이터 로그 스타일)
+   ========================================= */
+.modal-content { 
+    background: var(--box-bg); border: 4px solid var(--blue); 
+    box-shadow: 0 0 30px rgba(0, 212, 255, 0.2);
+}
+
+.user-thought {
+    background: rgba(0, 212, 255, 0.08);
+    border: 1px dashed var(--blue);
+    padding: 12px; margin-top: 15px;
+    font-size: 0.85rem; color: #7fdbff;
+    position: relative;
+}
+.user-thought::before {
+    content: "USER LOG:"; font-size: 9px; color: var(--blue);
+    position: absolute; top: -7px; left: 10px; background: var(--box-bg); padding: 0 5px;
+}
+
+/* [추가] 미니게임 및 시스템 유틸리티 클래스 */
+.error-shake { animation: shake 0.4s ease-in-out; }
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-8px); }
+    75% { transform: translateX(8px); }
+}
+
+.success-glow { animation: glow 1s ease-in-out; }
+@keyframes glow {
+    0% { box-shadow: 0 0 0px var(--blue); }
+    50% { box-shadow: 0 0 25px var(--blue); }
+    100% { box-shadow: 0 0 0px var(--blue); }
+}

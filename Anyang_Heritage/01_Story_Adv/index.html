@@ -1,0 +1,799 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>안양 문화유산 발굴조사 (Story Mode)</title>
+    <!-- Tailwind CSS for Layout -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        /* 로컬 폰트 불러오기 */
+        @font-face {
+            font-family: 'DungGeunMo';
+            src: url('./fonts/DungGeunMo.ttf') format('truetype');
+            font-weight: normal;
+            font-style: normal;
+        }
+
+        :root {
+            --primary-bg: #2d3748;
+            --dialogue-bg: rgba(26, 32, 44, 0.9);
+            --text-color: #f7fafc;
+            --accent-color: #ecc94b;
+        }
+
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            font-family: 'DungGeunMo', sans-serif;
+            background-color: #1a202c;
+            overflow: hidden;
+        }
+
+        #game-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: var(--primary-bg);
+            box-shadow: 0 0 20px rgba(0,0,0,0.8);
+            overflow: hidden;
+        }
+
+        /* Background & Scene Transitions */
+        #scene-bg {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background-size: cover;
+            background-position: center;
+            transition: opacity 1s ease-in-out;
+            opacity: 0;
+        }
+        
+        #scene-transition {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background-color: black;
+            z-index: 100;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: opacity 0.8s ease-in-out;
+            pointer-events: none;
+        }
+
+        #location-title {
+            color: white;
+            font-size: 2.5rem;
+            letter-spacing: 0.2rem;
+            text-align: center;
+            text-shadow: 0 0 10px rgba(255,255,255,0.8);
+        }
+
+        /* Character Layer */
+        #character-layer {
+            position: absolute;
+            bottom: 25%;
+            width: 100%;
+            height: 60%;
+            display: flex;
+            justify-content: center;
+            align-items: flex-end;
+            padding: 0 20px;
+            z-index: 10;
+        }
+
+        .character-sprite {
+            max-height: 100%;
+            max-width: 45%;
+            object-fit: contain;
+            transition: transform 0.3s ease, filter 0.3s ease;
+            filter: drop-shadow(0 0 10px rgba(0,0,0,0.5));
+        }
+
+        .char-dimmed { filter: brightness(0.4); transform: scale(0.95); z-index: 10;}
+        .char-active { filter: brightness(1.1); transform: scale(1.05); z-index: 20;}
+        .char-hidden { display: none; }
+
+        /* Dialogue UI */
+        #dialogue-box {
+            position: absolute;
+            bottom: 5%;
+            left: 5%;
+            width: 90%;
+            height: 25%;
+            background: var(--dialogue-bg);
+            border: 4px solid var(--accent-color);
+            border-radius: 12px;
+            padding: 15px 20px;
+            color: var(--text-color);
+            z-index: 50;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+            cursor: pointer;
+        }
+
+        #speaker-name {
+            font-size: 1.4rem;
+            color: var(--accent-color);
+            margin-bottom: 8px;
+            font-weight: bold;
+            text-shadow: 1px 1px 2px black;
+        }
+
+        #dialogue-text {
+            font-size: 1.2rem;
+            line-height: 1.6;
+            white-space: pre-wrap;
+        }
+
+        .next-indicator {
+            position: absolute;
+            bottom: 10px;
+            right: 20px;
+            font-size: 1.5rem;
+            animation: bounce 1s infinite;
+            color: var(--accent-color);
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-8px); }
+        }
+
+        /* Choice Branching UI */
+        #choice-container {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.7);
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 60;
+        }
+
+        .choice-btn {
+            background: #4a5568;
+            border: 3px solid var(--accent-color);
+            color: white;
+            padding: 15px 30px;
+            margin: 10px;
+            border-radius: 8px;
+            font-family: inherit;
+            font-size: 1.3rem;
+            width: 80%;
+            max-width: 400px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.5);
+        }
+
+        .choice-btn:hover {
+            background: var(--accent-color);
+            color: black;
+            transform: scale(1.05);
+        }
+
+        /* Top HUD (Dictionary) */
+        #hud-top {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            z-index: 40;
+        }
+
+        .icon-btn {
+            background: rgba(0,0,0,0.8);
+            border: 2px solid var(--accent-color);
+            color: var(--accent-color);
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.5rem;
+            cursor: pointer;
+            transition: transform 0.2s;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.5);
+        }
+        .icon-btn:hover { transform: scale(1.1); }
+
+        /* Dictionary Modal */
+        #dict-modal {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.95);
+            z-index: 200;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .dict-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            width: 100%;
+            max-width: 600px;
+            overflow-y: auto;
+            max-height: 85%;
+            padding-bottom: 20px;
+        }
+
+        .dict-item {
+            background: #2d3748;
+            border: 2px solid #4a5568;
+            border-radius: 8px;
+            padding: 10px;
+            text-align: center;
+            cursor: pointer;
+            position: relative;
+        }
+        .dict-item.unlocked { border-color: var(--accent-color); }
+        .dict-item.locked { opacity: 0.4; filter: grayscale(1); }
+        
+        .dict-img { width: 100%; height: 120px; object-fit: cover; border-radius: 4px; margin-bottom: 8px; background: #000; }
+        .dict-name { color: white; font-size: 1rem; }
+        .lock-icon { position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%); font-size: 2.5rem; color: #a0aec0; }
+
+        /* --- Actual Minigame Overlay --- */
+        #minigame-overlay {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(26, 32, 44, 0.98);
+            z-index: 80;
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: white;
+        }
+
+        #mg-header {
+            position: absolute;
+            top: 20px;
+            text-align: center;
+            width: 100%;
+        }
+
+        /* 1. Scratch (Brush) Minigame */
+        .scratch-container {
+            position: relative;
+            width: 300px;
+            height: 300px;
+            border: 4px solid var(--accent-color);
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 0 20px rgba(0,0,0,0.8);
+            cursor: url('./images/tool_brush.png') 16 16, auto; /* 커스텀 마우스 커서 */
+        }
+
+        #relic-image {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            object-fit: cover;
+        }
+
+        #scratch-canvas {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            z-index: 2;
+            touch-action: none; /* 터치 스크롤 방지 */
+        }
+
+        /* 2. Scan (Blur) Minigame */
+        .scan-container {
+            position: relative;
+            width: 300px;
+            height: 300px;
+            border: 4px solid var(--accent-color);
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 0 20px rgba(0,0,0,0.8);
+            cursor: url('./images/tool_scanner.png') 16 16, crosshair;
+        }
+
+        #scan-image {
+            width: 100%; height: 100%;
+            object-fit: cover;
+            filter: blur(20px);
+            transition: filter 0.5s ease;
+        }
+
+        .mg-progress {
+            margin-top: 20px;
+            width: 300px;
+            height: 20px;
+            background: #4a5568;
+            border-radius: 10px;
+            overflow: hidden;
+            border: 2px solid #2d3748;
+        }
+        
+        #mg-bar {
+            width: 0%;
+            height: 100%;
+            background: var(--accent-color);
+            transition: width 0.3s;
+        }
+
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+    
+    <!-- Background -->
+    <div id="scene-bg" style="background-image: url('./images/yanyangmap 1.jpg'); opacity: 1;"></div>
+    
+    <!-- HUD -->
+    <div id="hud-top">
+        <button class="icon-btn" onclick="toggleDictionary()"><i class="fa-solid fa-book-journal-whills"></i></button>
+    </div>
+
+    <!-- Characters Layer -->
+    <div id="character-layer">
+        <img id="char-han" src="./images/han_1.png" class="character-sprite char-active" alt="한연구원">
+        <img id="char-yang" src="./images/yang_1.png" class="character-sprite char-dimmed" alt="양연구원">
+    </div>
+
+    <!-- Dialogue Box -->
+    <div id="dialogue-box" onclick="advanceStory()">
+        <div id="speaker-name">한연구원</div>
+        <div id="dialogue-text">이곳이 바로 만안교 축조 현장... 아니, 그 흔적이 남은 곳이군요.</div>
+        <div class="next-indicator"><i class="fa-solid fa-caret-down"></i></div>
+    </div>
+
+    <!-- Branching Choices -->
+    <div id="choice-container"></div>
+
+    <!-- Scene Transition Overlay -->
+    <div id="scene-transition">
+        <div id="location-title">만안교 터</div>
+    </div>
+
+    <!-- Actual Minigame Overlay -->
+    <div id="minigame-overlay">
+        <div id="mg-header">
+            <h2 class="text-3xl font-bold mb-2 text-yellow-400" id="mg-title">유물 발굴</h2>
+            <p class="text-xl" id="mg-desc">화면을 드래그하여 흙을 닦아내세요!</p>
+        </div>
+        
+        <!-- Scratch UI -->
+        <div id="scratch-ui" class="scratch-container" style="display: none;">
+            <img id="relic-image" src="./images/relic_1_main.png" alt="유물">
+            <canvas id="scratch-canvas" width="300" height="300"></canvas>
+        </div>
+
+        <!-- Scan UI -->
+        <div id="scan-ui" class="scan-container" style="display: none;" onclick="processScan()">
+            <img id="scan-image" src="./images/relic_2_main.png" alt="유물">
+        </div>
+
+        <!-- Progress Bar -->
+        <div class="mg-progress">
+            <div id="mg-bar"></div>
+        </div>
+        
+        <p class="mt-4 text-gray-400" id="mg-hint">도구를 선택 중입니다...</p>
+    </div>
+
+    <!-- Dictionary Modal -->
+    <div id="dict-modal">
+        <div class="w-full flex justify-between items-center text-yellow-400 mb-6">
+            <h2 class="text-3xl font-bold"><i class="fa-solid fa-book"></i> 유물 조사 수첩</h2>
+            <button class="icon-btn" style="width:40px;height:40px;" onclick="toggleDictionary()"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="dict-grid" id="dict-content">
+            <!-- Items injected via JS -->
+        </div>
+    </div>
+
+</div>
+
+<!-- Audio Assets -->
+<audio id="bgm-ambient" loop><source src="./sounds/bgm_main.mp3" type="audio/mpeg"></audio>
+<audio id="sfx-click"><source src="./sounds/sfx_click.mp3" type="audio/mpeg"></audio>
+<audio id="sfx-success"><source src="./sounds/sfx_clear.mp3" type="audio/mpeg"></audio>
+<audio id="sfx-fail"><source src="./sounds/sfx_hit.mp3" type="audio/mpeg"></audio>
+<!-- Minigame SFX -->
+<audio id="sfx-brush"><source src="./sounds/sfx_brush.mp3" type="audio/mpeg"></audio>
+<audio id="sfx-scan"><source src="./sounds/sfx_scan.mp3" type="audio/mpeg"></audio>
+
+<script>
+    // --- Data & State ---
+    const GAME_CONFIG = {
+        storageKey: "anyang_heritage_story",
+    };
+
+    // 통합 유물 데이터 베이스
+    const RELIC_DATA = [
+        { id: 0, name: "중초사지 당간지주", desc: "보물 제4호. 사찰 입구에 깃발(당)을 다는 깃대(당간)를 고정하는 돌기둥입니다.", imageMain: "./images/relic_0_main.png", grade: "보물", location: "석수동" },
+        { id: 1, name: "만안교", desc: "경기도 유형문화재 제38호. 정조가 사도세자의 능으로 참배하러 갈 때 건넜던 홍예교(무지개 모양 다리)입니다.", imageMain: "./images/relic_1_main.png", grade: "도유형문화재", location: "석수동" },
+        { id: 2, name: "석수동 마애종", desc: "경기도 유형문화재 제92호. 바위벽에 종을 매달아 놓은 모양을 돋을새김으로 조각한 우리나라 유일의 마애종입니다.", imageMain: "./images/relic_2_main.png", grade: "도유형문화재", location: "석수동" },
+        { id: 3, name: "안양사 귀부", desc: "경기도 유형문화재 제93호. 고려시대 안양사의 옛 터에 남아있는 거북 모양의 비석 받침돌입니다.", imageMain: "./images/relic_3_main.png", grade: "도유형문화재", location: "석수동" },
+        { id: 7, name: "평촌 지석묘", desc: "경기도 기념물 제225호. 청동기 시대의 대표적인 무덤인 고인돌입니다.", imageMain: "./images/relic_7_main.png", grade: "도기념물", location: "평촌동" }
+    ];
+
+    const gameData = {
+        unlockedRelics: [],
+        currentSceneIndex: 0,
+        isTyping: false
+    };
+
+    // Story Script Array (표정 변화를 위해 이미지 명시)
+    const script = [
+        { type: 'transition', location: '제1구역: 만안교 터', bg: './images/yanyangmap 1.jpg' },
+        { type: 'dialogue', speaker: '한연구원', text: '여기가 바로 만안교가 있었던 자리군요. 공기가 다릅니다.', activeChar: 'han', hanImg: 'han_1.png', yangImg: 'yang_1.png' },
+        { type: 'dialogue', speaker: '양연구원', text: '네 선배님! 기록에 따르면 주변에 축조비 조각이 묻혀있을 가능성이 높습니다.', activeChar: 'yang', hanImg: 'han_1.png', yangImg: 'yang_2.png' },
+        { type: 'dialogue', speaker: '한연구원', text: '음... 바닥의 흙 색깔이 조금 이상하네요. 파볼까요?', activeChar: 'han', hanImg: 'han_2.png', yangImg: 'yang_1.png' },
+        
+        { type: 'choice', text: '어떻게 할까?', choices: [
+            { label: '조심스럽게 붓으로 흙을 턴다', nextIndex: 5 },
+            { label: '삽으로 깊게 파본다', nextIndex: 6 }
+        ]},
+        
+        // Choice 1 Branch
+        { type: 'dialogue', speaker: '양연구원', text: '역시 선배님! 유물이 훼손되지 않게 붓을 사용하는게 정석이죠.', activeChar: 'yang', hanImg: 'han_3.png', yangImg: 'yang_3.png', isBranch: true },
+        // Choice 2 Branch
+        { type: 'dialogue', speaker: '한연구원', text: '앗! 삽날에 뭔가 부딪혔어요. 붓으로 조심했어야 했는데...', activeChar: 'han', hanImg: 'han_2.png', yangImg: 'yang_2.png', isBranch: true, branchFrom: 6 },
+        
+        // Converge
+        { type: 'dialogue', speaker: '한연구원', text: '무언가 나왔습니다. 붓으로 흙을 완전히 털어내 봅시다!', activeChar: 'han', hanImg: 'han_2.png', yangImg: 'yang_1.png', forceIndex: 8 },
+        
+        { type: 'minigame', gameType: 'scratch', targetRelic: 1, hint: '붓(마우스/터치)으로 화면의 흙을 문질러 70% 이상 제거하세요.' },
+        
+        { type: 'dialogue', speaker: '양연구원', text: '세상에, 만안교의 흔적이 맞습니다! 수첩에 기록해둘게요.', activeChar: 'yang', hanImg: 'han_3.png', yangImg: 'yang_3.png' },
+        
+        { type: 'transition', location: '제2구역: 석수동 마애종', bg: './images/yanyangmap.jpg' },
+        { type: 'dialogue', speaker: '한연구원', text: '다음 장소입니다. 저 거대한 바위가 보이시나요?', activeChar: 'han', hanImg: 'han_1.png', yangImg: 'yang_1.png' },
+        { type: 'dialogue', speaker: '양연구원', text: '저건 바위에 종을 새긴 형태네요. 우리나라에 유일하다고 들었습니다.', activeChar: 'yang', hanImg: 'han_1.png', yangImg: 'yang_2.png' },
+        { type: 'dialogue', speaker: '한연구원', text: '맞아요. 그런데 오랜 세월에 조각이 너무 흐릿하네요. 스캔 장비로 복원해볼까요?', activeChar: 'han', hanImg: 'han_2.png', yangImg: 'yang_1.png' },
+        
+        { type: 'minigame', gameType: 'scan', targetRelic: 2, hint: '스캐너(클릭/터치)로 흐릿한 유물을 세 번 스캔하여 초점을 맞추세요.' },
+        
+        { type: 'dialogue', speaker: '양연구원', text: '복원 성공입니다! 마애종의 디테일이 살아났어요.', activeChar: 'yang', hanImg: 'han_3.png', yangImg: 'yang_3.png' },
+        { type: 'dialogue', speaker: '한연구원', text: '수고했습니다. 오늘의 조사는 여기까지 하죠. 조사 수첩을 확인해보세요!', activeChar: 'han', hanImg: 'han_3.png', yangImg: 'yang_3.png' }
+    ];
+
+    // --- DOM Elements ---
+    const speakerEl = document.getElementById('speaker-name');
+    const textEl = document.getElementById('dialogue-text');
+    const charHan = document.getElementById('char-han');
+    const charYang = document.getElementById('char-yang');
+    const choiceContainer = document.getElementById('choice-container');
+    const sfxClick = document.getElementById('sfx-click');
+
+    // --- Core Game Engine ---
+    function initGame() {
+        const savedData = localStorage.getItem(GAME_CONFIG.storageKey);
+        if(savedData) {
+            try { gameData.unlockedRelics = JSON.parse(savedData).unlockedRelics || []; } 
+            catch (e) { console.error(e); }
+        }
+
+        document.body.addEventListener('click', () => {
+            const bgm = document.getElementById('bgm-ambient');
+            if(bgm.paused) { bgm.volume = 0.3; bgm.play().catch(()=>{}); }
+        }, {once:true});
+        
+        renderScene();
+    }
+
+    function renderScene() {
+        if(gameData.currentSceneIndex >= script.length) {
+            alert("데모 스토리가 끝났습니다. 우측 상단 수첩을 확인해보세요!");
+            return;
+        }
+
+        const currentLine = script[gameData.currentSceneIndex];
+        document.getElementById('dialogue-box').style.display = 'block';
+
+        if (currentLine.type === 'transition') {
+            document.getElementById('dialogue-box').style.display = 'none';
+            playTransition(currentLine.location, currentLine.bg);
+        } else if (currentLine.type === 'dialogue') {
+            playDialogue(currentLine);
+        } else if (currentLine.type === 'choice') {
+            document.getElementById('dialogue-box').style.display = 'none';
+            showChoices(currentLine.choices);
+        } else if (currentLine.type === 'minigame') {
+            document.getElementById('dialogue-box').style.display = 'none';
+            startActualMinigame(currentLine);
+        }
+    }
+
+    function advanceStory() {
+        if(gameData.isTyping) {
+            const currentLine = script[gameData.currentSceneIndex];
+            textEl.innerHTML = currentLine.text;
+            gameData.isTyping = false;
+            return;
+        }
+
+        playSound(sfxClick);
+        const currentLine = script[gameData.currentSceneIndex];
+        
+        if(currentLine.isBranch && currentLine.forceIndex) {
+            gameData.currentSceneIndex = currentLine.forceIndex;
+        } else {
+            gameData.currentSceneIndex++;
+        }
+        
+        // Skip branches not taken
+        while(script[gameData.currentSceneIndex]?.isBranch && script[gameData.currentSceneIndex]?.branchFrom !== undefined) {
+             gameData.currentSceneIndex++;
+        }
+        renderScene();
+    }
+
+    function playDialogue(data) {
+        speakerEl.innerText = data.speaker;
+        speakerEl.style.color = data.speaker === '한연구원' ? '#b6e3f4' : '#ffdfbf';
+        
+        charHan.src = `./images/${data.hanImg}`;
+        charYang.src = `./images/${data.yangImg}`;
+        charHan.className = data.activeChar === 'han' ? 'character-sprite char-active' : 'character-sprite char-dimmed';
+        charYang.className = data.activeChar === 'yang' ? 'character-sprite char-active' : 'character-sprite char-dimmed';
+
+        typeWriter(data.text);
+    }
+
+    function typeWriter(text) {
+        gameData.isTyping = true;
+        textEl.innerHTML = '';
+        let i = 0;
+        function type() {
+            if(!gameData.isTyping) return; 
+            if (i < text.length) {
+                textEl.innerHTML += text.charAt(i);
+                i++;
+                setTimeout(type, 30);
+            } else {
+                gameData.isTyping = false;
+            }
+        }
+        type();
+    }
+
+    function playTransition(titleText, bgUrl) {
+        const transEl = document.getElementById('scene-transition');
+        const titleEl = document.getElementById('location-title');
+        const bgEl = document.getElementById('scene-bg');
+
+        titleEl.innerText = titleText;
+        transEl.style.opacity = '1';
+
+        setTimeout(() => {
+            bgEl.style.backgroundImage = `url('${bgUrl}')`;
+            gameData.currentSceneIndex++;
+            setTimeout(() => { transEl.style.opacity = '0'; renderScene(); }, 1500);
+        }, 1000);
+    }
+
+    function showChoices(choices) {
+        choiceContainer.innerHTML = '';
+        choices.forEach((choice, idx) => {
+            const btn = document.createElement('button');
+            btn.className = 'choice-btn';
+            btn.innerText = choice.label;
+            btn.onclick = () => {
+                playSound(sfxClick);
+                choiceContainer.style.display = 'none';
+                gameData.currentSceneIndex = (idx === 0) ? 5 : 6; // Hardcoded branch paths for demo
+                if(navigator.vibrate) navigator.vibrate(50);
+                renderScene();
+            };
+            choiceContainer.appendChild(btn);
+        });
+        choiceContainer.style.display = 'flex';
+    }
+
+    // --- Actual Minigames Implementation ---
+    let currentMgType = '';
+    let currentRelicId = null;
+    
+    // Scratch Variables
+    let isDrawing = false;
+    let canvas, ctx;
+    let brushAudioInterval;
+    
+    // Scan Variables
+    let scanClicks = 0;
+    const maxScanClicks = 3;
+
+    function startActualMinigame(data) {
+        currentMgType = data.gameType;
+        currentRelicId = data.targetRelic;
+        
+        document.getElementById('minigame-overlay').style.display = 'flex';
+        document.getElementById('mg-title').innerText = data.gameType === 'scratch' ? '유물 발굴 (붓)' : '유물 복원 (스캐너)';
+        document.getElementById('mg-desc').innerText = data.hint;
+        document.getElementById('mg-bar').style.width = '0%';
+        
+        const relicInfo = RELIC_DATA.find(r => r.id === currentRelicId);
+
+        if(data.gameType === 'scratch') {
+            document.getElementById('scratch-ui').style.display = 'block';
+            document.getElementById('scan-ui').style.display = 'none';
+            document.getElementById('relic-image').src = relicInfo.imageMain;
+            initScratch();
+        } else if (data.gameType === 'scan') {
+            document.getElementById('scratch-ui').style.display = 'none';
+            document.getElementById('scan-ui').style.display = 'block';
+            document.getElementById('scan-image').src = relicInfo.imageMain;
+            initScan();
+        }
+    }
+
+    // 1. 발굴(스크래치) 미니게임 로직
+    function initScratch() {
+        canvas = document.getElementById('scratch-canvas');
+        ctx = canvas.getContext('2d', { willReadFrequently: true });
+        
+        // 흙으로 덮기 (갈색)
+        ctx.globalCompositeOperation = 'source-over';
+        ctx.fillStyle = '#6b4c3a'; 
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // 이벤트 리스너 바인딩 (PC & 모바일)
+        canvas.onmousedown = (e) => { isDrawing = true; brushProcess(e); startBrushSound(); };
+        canvas.onmousemove = (e) => { if(isDrawing) brushProcess(e); };
+        canvas.onmouseup = () => { isDrawing = false; stopBrushSound(); checkScratchWin(); };
+        canvas.onmouseleave = () => { isDrawing = false; stopBrushSound(); };
+
+        canvas.ontouchstart = (e) => { isDrawing = true; brushProcess(e.touches[0]); startBrushSound(); };
+        canvas.ontouchmove = (e) => { if(isDrawing) brushProcess(e.touches[0]); };
+        canvas.ontouchend = () => { isDrawing = false; stopBrushSound(); checkScratchWin(); };
+    }
+
+    function brushProcess(e) {
+        const rect = canvas.getBoundingClientRect();
+        const x = (e.clientX - rect.left) * (canvas.width / rect.width);
+        const y = (e.clientY - rect.top) * (canvas.height / rect.height);
+
+        ctx.globalCompositeOperation = 'destination-out';
+        ctx.beginPath();
+        ctx.arc(x, y, 25, 0, Math.PI * 2); // 브러시 크기
+        ctx.fill();
+
+        // 대략적인 진행도 업데이트 (최적화를 위해 매번 픽셀 검사하지 않고 대략적 업데이트)
+        // 정확한 검사는 onmouseup(checkScratchWin)에서 수행
+    }
+
+    function startBrushSound() {
+        const sfxBrush = document.getElementById('sfx-brush');
+        sfxBrush.currentTime = 0;
+        sfxBrush.play().catch(()=>{});
+        brushAudioInterval = setInterval(() => { sfxBrush.currentTime = 0; sfxBrush.play().catch(()=>{}); }, 800);
+    }
+    function stopBrushSound() {
+        clearInterval(brushAudioInterval);
+    }
+
+    function checkScratchWin() {
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const pixels = imageData.data;
+        let clearCount = 0;
+        for (let i = 3; i < pixels.length; i += 4) {
+            if (pixels[i] === 0) clearCount++; // 투명해진 픽셀 수
+        }
+        const clearRatio = clearCount / (canvas.width * canvas.height);
+        document.getElementById('mg-bar').style.width = (clearRatio * 100) + '%';
+
+        if (clearRatio >= 0.7) { // 70% 이상 닦아내면 성공
+            canvas.onmousedown = null; canvas.ontouchstart = null;
+            setTimeout(completeMinigame, 500);
+        }
+    }
+
+    // 2. 스캔(초점) 미니게임 로직
+    function initScan() {
+        scanClicks = 0;
+        document.getElementById('scan-image').style.filter = 'blur(20px)';
+        document.getElementById('mg-bar').style.width = '0%';
+    }
+
+    function processScan() {
+        if(scanClicks >= maxScanClicks) return;
+        
+        playSound(document.getElementById('sfx-scan'));
+        if(navigator.vibrate) navigator.vibrate(50);
+        
+        scanClicks++;
+        const blurValue = 20 - (scanClicks * (20 / maxScanClicks));
+        document.getElementById('scan-image').style.filter = `blur(${blurValue}px)`;
+        document.getElementById('mg-bar').style.width = ((scanClicks / maxScanClicks) * 100) + '%';
+
+        if (scanClicks >= maxScanClicks) {
+            setTimeout(completeMinigame, 500);
+        }
+    }
+
+    // 미니게임 클리어 공통 로직
+    function completeMinigame() {
+        playSound(document.getElementById('sfx-success'));
+        if(navigator.vibrate) navigator.vibrate([100, 50, 100]);
+        
+        const relicInfo = RELIC_DATA.find(r => r.id === currentRelicId);
+        alert(`[미니게임 클리어]\n${relicInfo.name} 유물을 도감에 등록했습니다!`);
+        
+        if(!gameData.unlockedRelics.includes(currentRelicId)) {
+            gameData.unlockedRelics.push(currentRelicId);
+            localStorage.setItem(GAME_CONFIG.storageKey, JSON.stringify({ unlockedRelics: gameData.unlockedRelics }));
+        }
+
+        document.getElementById('minigame-overlay').style.display = 'none';
+        document.getElementById('scratch-ui').style.display = 'none';
+        document.getElementById('scan-ui').style.display = 'none';
+        
+        gameData.currentSceneIndex++;
+        renderScene();
+    }
+
+    // --- Dictionary (HUD) ---
+    function toggleDictionary() {
+        playSound(sfxClick);
+        const modal = document.getElementById('dict-modal');
+        if(modal.style.display === 'flex') {
+            modal.style.display = 'none';
+        } else {
+            renderDictionary();
+            modal.style.display = 'flex';
+        }
+    }
+
+    function renderDictionary() {
+        const container = document.getElementById('dict-content');
+        container.innerHTML = '';
+
+        RELIC_DATA.forEach(relic => {
+            const isUnlocked = gameData.unlockedRelics.includes(relic.id);
+            const div = document.createElement('div');
+            div.className = `dict-item ${isUnlocked ? 'unlocked' : 'locked'}`;
+            
+            div.innerHTML = `
+                <img src="${isUnlocked ? relic.imageMain : './images/logo_1.png'}" class="dict-img" alt="${relic.name}">
+                <div class="dict-name">${isUnlocked ? relic.name : '미발견 유물'}</div>
+                ${!isUnlocked ? '<i class="fa-solid fa-lock lock-icon"></i>' : ''}
+            `;
+
+            if(isUnlocked) {
+                div.onclick = () => alert(`[${relic.grade}] ${relic.name}\n발견 장소: ${relic.location}\n\n${relic.desc}`);
+            }
+            container.appendChild(div);
+        });
+    }
+
+    function playSound(audioElement) {
+        if(!audioElement) return;
+        audioElement.currentTime = 0;
+        audioElement.play().catch(()=>{});
+    }
+
+    window.onload = initGame;
+</script>
+</body>
+</html>

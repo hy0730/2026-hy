@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>안양 유물 복원실 : Masterpiece</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=DungGeunMo&family=Noto+Sans+KR:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
+    
+    <link rel="stylesheet" href="style.css">
+    
+    <style>
+        /* 이미지가 깨지면 회색 박스와 텍스트가 대신 나옴 */
+        img { min-width: 20px; min-height: 20px; background-color: rgba(0,0,0,0.1); }
+        img[alt]:after { display: block; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: #3e2723; color: #fff; content: attr(alt); font-size: 10px; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+    </style>
+</head>
+<body>
+
+    <div id="app-container">
+        <div class="scanline"></div>
+        <div class="vignette"></div>
+
+        <header class="top-status-bar">
+            <div class="level-group">
+                <div class="level-badge">Lv.<span id="val-level">1</span></div>
+                <div class="exp-track" title="경험치">
+                    <div id="exp-fill" class="exp-fill" style="width: 0%;"></div>
+                </div>
+            </div>
+
+            <div class="resource-group">
+                <div class="res-pill energy" title="행동력">
+                    <i class="fa-solid fa-bolt"></i>
+                    <span id="val-energy">100/100</span>
+                </div>
+                <div class="res-pill gold" title="보유 예산">
+                    <i class="fa-solid fa-coins"></i>
+                    <span id="val-gold">0 G</span>
+                </div>
+                <div class="income-tag animate__animated animate__pulse animate__infinite">
+                    <span id="val-revenue">+0/s</span>
+                </div>
+            </div>
+        </header>
+
+        <main id="main-viewport">
+            
+            <div id="view-map" class="view-section active">
+                <div class="map-wrapper">
+                    <img src="../images/yanyangmap.jpg" class="bg-map" alt="안양 지도 배경" onerror="this.style.opacity=0.1">
+                    <div class="map-placeholder-text" style="display:none; position:absolute; top:50%; width:100%; text-align:center;">지도 이미지가 없습니다</div>
+                    
+                    <div id="landmark-pins"></div>
+                    
+                    <div id="map-visitors" class="visitor-layer"></div>
+                </div>
+                <div class="map-ui-overlay">
+                    <div class="info-bubble">
+                        <i class="fa-solid fa-circle-info"></i> 파편 9개를 모아 랜드마크를 건설하세요!
+                    </div>
+                </div>
+            </div>
+
+            <div id="view-museum" class="view-section">
+                <div class="museum-interior">
+                    <div class="spotlight"></div>
+                    <div id="museum-visitors" class="visitor-layer"></div>
+                    
+                    <div class="exhibition-rail">
+                        <div class="exhibition-slots" id="museum-slots">
+                            <div class="slot empty"><div class="slot-inner">전시 대기</div></div>
+                            <div class="slot empty"><div class="slot-inner">전시 대기</div></div>
+                            <div class="slot locked"><i class="fa-solid fa-lock"></i></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="museum-dashboard">
+                    <div class="dash-row">
+                        <span class="museum-title">🏛️ 안양 역사 박물관</span>
+                        <div class="rating-stars" id="museum-stars">⭐⭐</div>
+                    </div>
+                    <div class="dash-row sub">
+                        <span>현재 관람객: <b id="val-visitors">0</b>명</span>
+                        <button class="btn-manage" onclick="window.openShopModal()">관리</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="view-workshop" class="view-section">
+                <div class="workshop-toolbar">
+                    <span class="label"><i class="fa-solid fa-hammer"></i> 작업대</span>
+                    <div class="tool-actions">
+                        <button class="btn-action" id="btn-auto-sort" title="자동 정렬"><i class="fa-solid fa-arrow-down-a-z"></i></button>
+                        <button class="btn-action danger" id="btn-trash-mode" title="아이템 파기"><i class="fa-solid fa-trash"></i></button>
+                    </div>
+                </div>
+                
+                <div class="grid-container">
+                    <div id="merge-grid" class="merge-grid">
+                        </div>
+                </div>
+                
+                <div class="workshop-footer">
+                    <p class="guide-msg">같은 모양의 파편을 드래그해서 합치세요.</p>
+                </div>
+            </div>
+        </main>
+
+        <nav class="bottom-tab-nav">
+            <button class="tab-btn active" data-target="view-map" onclick="switchTab('map')">
+                <i class="fa-solid fa-map-location-dot"></i>
+                <span>지도</span>
+            </button>
+            <button class="tab-btn" data-target="view-museum" onclick="switchTab('museum')">
+                <i class="fa-solid fa-building-columns"></i>
+                <span>박물관</span>
+            </button>
+            <button class="tab-btn" data-target="view-workshop" onclick="switchTab('workshop')">
+                <i class="fa-solid fa-screwdriver-wrench"></i>
+                <span>작업대</span>
+            </button>
+            <button class="tab-btn highlight" onclick="location.href='../02_Card_Battle/index.html'">
+                <i class="fa-solid fa-person-digging"></i>
+                <span>발굴하기</span>
+            </button>
+        </nav>
+
+        <div id="modal-restore" class="modal-overlay hidden">
+            <div class="modal-window restore-window">
+                <div class="modal-header">
+                    <h2>✨ 유물 정밀 복원</h2>
+                    <button class="btn-close" onclick="window.closeModal('modal-restore')">✖</button>
+                </div>
+                
+                <div class="restore-content">
+                    <div class="canvas-wrapper">
+                        <div class="relic-display">
+                            <img id="restore-target-img" src="" alt="유물 원본" class="base-img" onerror="this.src='https://via.placeholder.com/200?text=Relic'">
+                            <canvas id="scrub-canvas"></canvas>
+                        </div>
+                        
+                        <div class="durability-bar">
+                            <i class="fa-solid fa-heart pulse-icon"></i>
+                            <div class="bar-track"><div id="relic-hp-fill" class="bar-fill" style="width: 100%;"></div></div>
+                        </div>
+                    </div>
+
+                    <div class="tool-selector">
+                        <button class="tool-btn active" data-tool="brush" onclick="window.selectTool('brush')">
+                            <div class="icon-box"><img src="../images/tool_brush.png" alt="붓" onerror="this.style.display='none'; this.parentNode.innerHTML='🖌️'"></div>
+                            <span>붓</span>
+                        </button>
+                        <button class="tool-btn" data-tool="cotton" onclick="window.selectTool('cotton')">
+                            <div class="icon-box"><img src="../images/tool_cotton.png" alt="솜" onerror="this.style.display='none'; this.parentNode.innerHTML='☁️'"></div>
+                            <span>솜</span>
+                        </button>
+                        <button class="tool-btn" data-tool="spatula" onclick="window.selectTool('spatula')">
+                            <div class="icon-box"><img src="../images/tool_spatula.png" alt="헤라" onerror="this.style.display='none'; this.parentNode.innerHTML='⛏️'"></div>
+                            <span>헤라</span>
+                        </button>
+                        <button class="tool-btn" data-tool="chemical" onclick="window.selectTool('chemical')">
+                            <div class="icon-box"><img src="../images/tool_glue.png" alt="약품" onerror="this.style.display='none'; this.parentNode.innerHTML='🧪'"></div>
+                            <span>약품</span>
+                        </button>
+                    </div>
+
+                    <div class="restore-status">
+                        <p id="tool-desc">도구를 선택해 오염을 제거하세요.</p>
+                        <div class="percent">복원율 <span id="restore-percent">0</span>%</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="modal-shop" class="modal-overlay hidden">
+            <div class="modal-window">
+                <div class="modal-header">
+                    <h2>⚒️ 복원실 비품 구매</h2>
+                    <button class="btn-close" onclick="window.closeModal('modal-shop')">✖</button>
+                </div>
+                <div class="shop-list" id="shop-items-container">
+                    <div class="shop-item placeholder">
+                        <span>준비 중입니다...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="modal-dict" class="modal-overlay hidden">
+            <div class="modal-window dict-window">
+                <div class="modal-header">
+                    <h2>📚 안양 문화유산 도감</h2>
+                    <button class="btn-close" onclick="window.closeModal('modal-dict')">✖</button>
+                </div>
+                <div class="dict-grid" id="dict-list">
+                    </div>
+            </div>
+        </div>
+
+        <div id="toast-msg"></div>
+
+    </div>
+
+    <script src="../data.js"></script>
+    <script src="script.js"></script>
+    
+    <script>
+        // 탭 전환 로직 (JS 로드 실패 시에도 작동하도록 인라인 처리)
+        function switchTab(tabName) {
+            // 1. 모든 뷰 숨기기
+            document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
+            // 2. 모든 탭 버튼 비활성화
+            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+            
+            // 3. 선택한 뷰 보이기
+            const targetView = document.getElementById(`view-${tabName}`);
+            if(targetView) targetView.classList.add('active');
+            
+            // 4. 선택한 버튼 활성화
+            const targetBtn = document.querySelector(`.tab-btn[data-target="view-${tabName}"]`);
+            if(targetBtn) targetBtn.classList.add('active');
+
+            // 5. 작업대 탭일 때 그리드 리렌더링 (사이즈 이슈 방지)
+            if(tabName === 'workshop' && window.renderGrid) {
+                window.renderGrid();
+            }
+        }
+    </script>
+</body>
+</html>

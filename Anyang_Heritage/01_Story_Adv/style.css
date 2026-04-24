@@ -1,0 +1,293 @@
+@charset "utf-8";
+
+/* ==========================================================================
+   [안양의 시간 - 공통 레트로 팔레트]
+   ========================================================================== */
+:root {
+    --retro-bg: #8d6e63;      /* 따뜻한 흙색 (배경) */
+    --retro-box: #fdfcf8;     /* 한지/종이색 (텍스트 박스) */
+    --retro-border: #3e2723;  /* 짙은 고동색 (테두리) */
+    --retro-green: #558b2f;   /* 자연의 녹색 (수락/진행) */
+    --retro-red: #d32f2f;     /* 도장/경고 붉은색 */
+    --retro-blue: #283593;    /* 남색 (정보 포인트) */
+    --retro-gold: #ffca28;    /* 황금/포인트 색상 */
+    --retro-shadow: 4px 4px 0 rgba(62, 39, 35, 0.4);
+    
+    --font-main: 'DungGeunMo', sans-serif;
+}
+
+* { 
+    box-sizing: border-box; 
+    -webkit-tap-highlight-color: transparent; 
+}
+
+body {
+    margin: 0; padding: 0;
+    background-color: #222;
+    font-family: var(--font-main);
+    display: flex; justify-content: center; 
+    height: 100vh; overflow: hidden;
+}
+
+#app-container {
+    width: 100%; max-width: 480px; height: 100%;
+    background-color: #000;
+    position: relative; display: flex; flex-direction: column;
+    border: 4px solid var(--retro-border);
+    overflow: hidden;
+    box-shadow: 0 0 20px rgba(0,0,0,0.5);
+}
+
+.hidden { display: none !important; }
+
+/* CRT 스캔라인 효과 */
+.scanline {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    background: linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,0) 50%, rgba(0,0,0,0.05) 50%, rgba(0,0,0,0.05));
+    background-size: 100% 4px; pointer-events: none; z-index: 900;
+}
+
+/* ==========================================================================
+   [1] 상단 HUD
+   ========================================================================== */
+.hud-header {
+    background: var(--retro-border); color: #fff;
+    padding: 10px 15px; display: flex; justify-content: space-between; align-items: center;
+    border-bottom: 4px solid #1a0f0d; z-index: 100; flex-shrink: 0;
+}
+.header-left { display: flex; align-items: center; gap: 10px; }
+.header-title { font-size: 16px; color: var(--retro-gold); letter-spacing: 1px; text-shadow: 1px 1px 0 #000; }
+
+.btn-exit {
+    background: var(--retro-red); border: 2px solid #fff; color: #fff;
+    padding: 6px 12px; font-family: var(--font-main); cursor: pointer; font-size: 12px;
+    box-shadow: 2px 2px 0 rgba(0,0,0,0.5); border-radius: 4px;
+    transition: transform 0.1s;
+}
+.btn-exit:active { transform: translate(2px, 2px); box-shadow: none; }
+
+/* ==========================================================================
+   [2] 메인 씬 (Visual Novel Stage)
+   ========================================================================== */
+.vn-stage {
+    flex: 1; position: relative; overflow: hidden;
+    background-color: var(--retro-bg);
+}
+
+.scene-bg {
+    width: 100%; height: 100%;
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    transition: opacity 0.5s ease-in-out;
+    filter: sepia(0.2) contrast(1.1); /* 약간 바랜 옛날 사진 느낌 */
+}
+
+/* ==========================================================================
+   [3] 대화창 (Dialogue Area)
+   ========================================================================== */
+.dialogue-area {
+    height: 160px; 
+    background: var(--retro-box);
+    border-top: 4px solid var(--retro-border);
+    padding: 15px; 
+    position: relative; cursor: pointer;
+    display: flex; flex-direction: row; gap: 15px; 
+    z-index: 50; flex-shrink: 0;
+    align-items: flex-start;
+    box-shadow: 0 -5px 15px rgba(0,0,0,0.3);
+}
+
+/* 캐릭터 초상화 */
+.portrait-box {
+    width: 80px; height: 80px; 
+    background: #d7ccc8;
+    border: 3px solid var(--retro-border);
+    flex-shrink: 0; position: relative;
+    box-shadow: 2px 2px 0 rgba(0,0,0,0.2);
+    overflow: hidden; border-radius: 4px;
+    margin-top: 5px;
+    /* 체커보드 배경 패턴 */
+    background-image: linear-gradient(45deg, #efebe9 25%, transparent 25%, transparent 75%, #efebe9 75%, #efebe9), linear-gradient(45deg, #efebe9 25%, transparent 25%, transparent 75%, #efebe9 75%, #efebe9);
+    background-size: 10px 10px;
+    background-position: 0 0, 5px 5px;
+}
+
+#dialogue-portrait {
+    width: 100%; height: 100%;
+    object-fit: cover; 
+    object-position: top center;
+}
+
+/* 텍스트 영역 */
+.dialogue-content {
+    flex: 1; display: flex; flex-direction: column;
+    height: 100%; position: relative;
+}
+
+.name-badge {
+    display: inline-block; width: fit-content;
+    background: var(--retro-green); color: #fff;
+    padding: 4px 10px; border: 2px solid var(--retro-border);
+    border-radius: 12px; font-size: 12px; font-weight: bold;
+    box-shadow: 2px 2px 0 rgba(0,0,0,0.2);
+    margin-bottom: 8px;
+    text-shadow: 1px 1px 0 rgba(0,0,0,0.5);
+}
+
+.text-box {
+    flex: 1; font-size: 15px; line-height: 1.6; color: #211210;
+    overflow-y: auto; padding-right: 5px;
+    margin: 0; word-break: keep-all; font-weight: bold;
+}
+
+/* 깜빡이는 화살표 */
+.cursor-blink {
+    color: var(--retro-red); 
+    animation: blink 1s infinite; 
+    font-size: 14px; margin-left: 5px;
+}
+@keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+
+/* ==========================================================================
+   [4] 미니게임 및 결과창 오버레이 (Overlay)
+   ========================================================================== */
+.overlay {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(33, 18, 16, 0.85); z-index: 100;
+    display: flex; flex-direction: column; justify-content: center; align-items: center;
+    backdrop-filter: blur(2px);
+    padding: 20px;
+}
+
+/* 결과, 엔딩 오버레이는 최상단으로 */
+#result-overlay, #ending-overlay { z-index: 1000; }
+
+/* 미니게임 컨테이너 */
+.minigame-box {
+    width: 100%; max-width: 400px;
+    display: flex; flex-direction: column; gap: 12px;
+}
+
+.minigame-box h3 {
+    background: var(--retro-border); color: var(--retro-gold); text-align: center; 
+    padding: 12px; border: 3px solid var(--retro-gold); border-radius: 8px;
+    margin: 0; font-size: 16px; box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+    line-height: 1.4;
+}
+
+.minigame-container {
+    background: var(--retro-box); border: 4px solid var(--retro-border);
+    border-radius: 8px; padding: 15px; position: relative;
+    min-height: 200px; display: flex; flex-direction: column; justify-content: center;
+    box-shadow: inset 0 0 10px rgba(0,0,0,0.1);
+}
+
+/* JS에서 생성되는 버튼들의 hover 처리 */
+.minigame-container button:hover, .minigame-container div[style*="cursor: pointer"]:hover {
+    filter: brightness(1.1);
+    transform: translateY(-2px);
+}
+.minigame-container button:active, .minigame-container div[style*="cursor: pointer"]:active {
+    transform: translate(2px, 2px) !important;
+    box-shadow: none !important;
+}
+
+/* ==========================================================================
+   [5] 스테이지 결과창 (단서 획득)
+   ========================================================================== */
+.result-card {
+    background: var(--retro-box); border: 4px solid var(--retro-border);
+    padding: 25px 20px; width: 100%; max-width: 320px; text-align: center;
+    box-shadow: 10px 10px 0 rgba(0,0,0,0.8);
+    animation: slideUp 0.5s; border-radius: 8px;
+}
+
+.result-card h2 { 
+    color: var(--retro-border); margin: 0 0 15px 0; font-size: 20px; 
+    border-bottom: 2px dashed var(--retro-bg); padding-bottom: 10px; 
+}
+
+.result-img-box {
+    background: #fff; border: 2px solid var(--retro-border);
+    margin: 0 auto 15px; width: 120px; height: 120px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center; background-color: var(--retro-bg);
+}
+.result-img-box img { max-width: 80%; max-height: 80%; object-fit: contain; filter: drop-shadow(2px 2px 0 rgba(0,0,0,0.5)); }
+
+.reward-box {
+    background: #efebe9; padding: 12px; border-radius: 8px; margin: 15px 0;
+    border: 2px solid var(--retro-border); font-size: 13px; color: #333;
+}
+.reward-box .highlight { color: var(--retro-red); font-weight: bold; font-size: 16px; display: block; margin-top: 5px; }
+
+.btn-confirm {
+    width: 100%; padding: 14px; background: var(--retro-green); color: #fff;
+    border: 2px solid #fff; font-family: var(--font-main); font-size: 16px;
+    cursor: pointer; box-shadow: 3px 3px 0 rgba(0,0,0,0.5); border-radius: 6px;
+    transition: transform 0.1s;
+}
+.btn-confirm:active { transform: translate(3px, 3px); box-shadow: none; }
+
+/* ==========================================================================
+   [6] 최종 엔딩 : 조사대원증 (Certificate Card)
+   ========================================================================== */
+.certificate-card {
+    background: #fff; width: 100%; max-width: 340px; padding: 25px 20px;
+    border: 8px double var(--retro-border); box-shadow: 10px 10px 0 rgba(0,0,0,0.5);
+    color: #333; animation: slideUp 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    position: relative;
+}
+
+/* 워터마크 효과 */
+.certificate-card::before {
+    content: 'ANYANG HERITAGE';
+    position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-35deg);
+    font-size: 40px; color: rgba(0,0,0,0.04); font-weight: bold; pointer-events: none; white-space: nowrap;
+}
+
+.cert-header { text-align: center; margin-bottom: 20px; }
+.cert-title { display: block; font-size: 22px; color: var(--retro-border); font-weight: bold; letter-spacing: -1px; }
+.cert-sub { font-size: 11px; color: #888; text-transform: uppercase; letter-spacing: 2px; margin-top: 4px; display: block; }
+.cert-line { border: 0; height: 3px; background: var(--retro-border); margin: 10px 0; }
+
+.cert-body { display: flex; gap: 15px; align-items: stretch; margin-bottom: 20px; }
+.cert-photo-area {
+    width: 85px; height: 110px; background: #eee;
+    border: 2px solid var(--retro-border); padding: 4px;
+    display: flex; align-items: center; justify-content: center;
+}
+.cert-photo-area img { width: 100%; height: 100%; object-fit: cover; border: 1px solid #999; filter: grayscale(0.2) contrast(1.2); }
+
+.cert-info { flex: 1; display: flex; flex-direction: column; gap: 8px; font-size: 14px; justify-content: center; }
+.info-row { display: flex; border-bottom: 1px dashed #ccc; padding-bottom: 4px; justify-content: space-between; }
+.info-row .label { color: #666; font-weight: bold; }
+.info-row .value { font-weight: bold; color: var(--retro-border); }
+.info-row .value.score { color: var(--retro-red); font-size: 16px; }
+
+/* 평가 도장 */
+.cert-grade-box { text-align: center; margin-bottom: 20px; position: relative; }
+.grade-label { font-size: 12px; color: #888; display: block; margin-bottom: 5px; font-weight: bold; }
+.grade-text {
+    font-size: 55px; margin: 0 auto; color: var(--retro-red);
+    font-weight: bold; text-shadow: 2px 2px 0 rgba(0,0,0,0.1);
+    transform: rotate(-10deg); display: flex; align-items: center; justify-content: center;
+    border: 4px solid var(--retro-red); border-radius: 50%;
+    width: 90px; height: 90px;
+    box-shadow: inset 0 0 10px rgba(211, 47, 47, 0.2);
+    background: rgba(255,255,255,0.9);
+}
+
+.cert-footer { text-align: center; }
+.cert-footer p { font-size: 12px; color: var(--retro-border); margin-bottom: 15px; font-weight: bold; }
+.cert-footer .btn-confirm { 
+    background: var(--retro-border); font-size: 16px; padding: 12px; 
+    border: 2px solid var(--retro-gold); color: var(--retro-gold); 
+}
+.cert-footer .btn-confirm:hover { background: #2a1a15; }
+
+/* 팝업 애니메이션 */
+@keyframes slideUp { 
+    from { transform: translateY(50px); opacity: 0; } 
+    to { transform: translateY(0); opacity: 1; } 
+}

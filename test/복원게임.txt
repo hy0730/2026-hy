@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>안양 문화유산 복원 프로젝트</title>
+    <style>
+        body {
+            background-color: #2c3e50;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            color: white;
+            font-family: 'Pretendard', sans-serif;
+            overflow: hidden;
+        }
+        
+        /* 게임 화면 틀 */
+        #game-container {
+            position: relative;
+            width: 360px; /* 모바일 비율 */
+            height: 640px;
+            background: #000;
+            border: 8px solid #8e44ad; /* 안양시 로고 컬러 느낌 */
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 0 30px rgba(0,0,0,0.5);
+        }
+
+        /* 유물 표시 영역 */
+        #artifact-area {
+            position: relative;
+            width: 100%;
+            height: 60%;
+            background-color: #333;
+            overflow: hidden;
+        }
+
+        /* 유물 이미지 */
+        #artifact-img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: filter 0.5s ease;
+            /* 초기 상태: 흑백 + 흐림 */
+            filter: grayscale(100%) blur(5px) brightness(0.6); 
+        }
+
+        /* 복원 효과 (파티클 등) */
+        .sparkle {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            background: yellow;
+            border-radius: 50%;
+            pointer-events: none;
+            animation: pop 0.5s forwards;
+        }
+
+        @keyframes pop {
+            0% { transform: scale(0); opacity: 1; }
+            100% { transform: scale(2); opacity: 0; }
+        }
+
+        /* UI 영역 */
+        #ui-area {
+            height: 40%;
+            background: #ecf0f1;
+            color: #333;
+            padding: 20px;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        /* 상태바 */
+        .status-box { width: 100%; margin-bottom: 20px; }
+        .bar-bg { width: 100%; height: 20px; background: #bdc3c7; border-radius: 10px; overflow: hidden; }
+        .bar-fill { 
+            width: 0%; height: 100%; 
+            background: linear-gradient(90deg, #f1c40f, #2ecc71); 
+            transition: width 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+        }
+        .status-text { text-align: right; font-weight: bold; margin-top: 5px; font-size: 14px; }
+
+        /* 도구 버튼들 */
+        .tools { display: flex; gap: 10px; width: 100%; justify-content: space-around; }
+        .tool-btn {
+            width: 80px; height: 80px;
+            background: white;
+            border: 2px solid #bdc3c7;
+            border-radius: 15px;
+            font-size: 30px;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 0 #95a5a6;
+            transition: transform 0.1s;
+        }
+        .tool-btn:active { transform: translateY(4px); box-shadow: none; }
+        .tool-name { font-size: 12px; margin-top: 5px; font-weight: bold; }
+
+        /* 메시지 창 */
+        #msg-box {
+            margin-top: 15px;
+            font-size: 14px;
+            color: #7f8c8d;
+            height: 20px;
+        }
+
+        /* 파일 업로드 (테스트용) */
+        #upload-box { margin-top: 20px; font-size: 12px; color: #ccc; }
+    </style>
+</head>
+<body>
+
+    <div id="game-container">
+        <div id="artifact-area">
+            <img id="artifact-img" src="https://upload.wikimedia.org/wikipedia/commons/thumb/d/d6/Manan_bridge.JPG/640px-Manan_bridge.JPG" alt="유물">
+            <div id="effect-layer"></div>
+        </div>
+
+        <div id="ui-area">
+            <div class="status-box">
+                <div style="display:flex; justify-content:space-between;">
+                    <strong>🏛️ 만안교 (조선시대)</strong>
+                    <span id="percent-txt">복원율 0%</span>
+                </div>
+                <div class="bar-bg">
+                    <div id="hp-bar" class="bar-fill"></div>
+                </div>
+            </div>
+
+            <div class="tools">
+                <button class="tool-btn" onclick="restore(10, 'brush')">
+                    🧹
+                    <span class="tool-name">먼지 털기</span>
+                </button>
+                <button class="tool-btn" onclick="restore(15, 'hammer')">
+                    🔨
+                    <span class="tool-name">형태 잡기</span>
+                </button>
+                <button class="tool-btn" onclick="restore(20, 'glue')">
+                    🧪
+                    <span class="tool-name">접착하기</span>
+                </button>
+            </div>
+
+            <div id="msg-box">도구를 선택해 복원을 시작하세요!</div>
+        </div>
+    </div>
+
+    <div id="upload-box">
+        <label>📸 내 사진으로 테스트: <input type="file" id="imgInput" accept="image/*"></label>
+    </div>
+
+<script>
+    let restoration = 0; // 현재 복원도 (0 ~ 100)
+    const imgEl = document.getElementById('artifact-img');
+    const barEl = document.getElementById('hp-bar');
+    const txtEl = document.getElementById('percent-txt');
+    const msgEl = document.getElementById('msg-box');
+    const effectLayer = document.getElementById('effect-layer');
+
+    // === 핵심 메커니즘: 복원 행동 ===
+    function restore(amount, type) {
+        if (restoration >= 100) return; // 이미 완료됨
+
+        // 1. 수치 증가
+        restoration += amount;
+        if (restoration > 100) restoration = 100;
+
+        // 2. 시각적 피드백 (점점 선명해짐)
+        updateVisuals();
+
+        // 3. 효과 메시지
+        let msg = "";
+        if(type === 'brush') msg = "조심스럽게 먼지를 털어냅니다.";
+        if(type === 'hammer') msg = "돌의 균형을 맞춥니다!";
+        if(type === 'glue') msg = "틈새를 메꿔 견고하게 만듭니다.";
+        msgEl.innerText = msg;
+
+        // 4. 파티클 효과 생성
+        createSparkle();
+
+        // 5. 완료 체크
+        if (restoration >= 100) {
+            msgEl.innerText = "🎉 복원 성공! 역사가 되살아났습니다!";
+            msgEl.style.color = "green";
+            msgEl.style.fontWeight = "bold";
+            alert("✨ [만안교] 복원 완료! ✨\n\n정조 대왕의 효심이 깃든 다리가 본래의 모습을 되찾았습니다.");
+        }
+    }
+
+    // === 비주얼 업데이트 (흑백 -> 컬러 변환 로직) ===
+    function updateVisuals() {
+        // 복원율 0% -> grayscale(100%), blur(5px)
+        // 복원율 100% -> grayscale(0%), blur(0px)
+        
+        const grayVal = 100 - restoration; // 100 -> 0
+        const blurVal = (100 - restoration) / 20; // 5 -> 0
+        const brightVal = 0.6 + (restoration / 100 * 0.4); // 0.6 -> 1.0
+
+        imgEl.style.filter = `grayscale(${grayVal}%) blur(${blurVal}px) brightness(${brightVal})`;
+        
+        // HP바 업데이트
+        barEl.style.width = restoration + "%";
+        txtEl.innerText = `복원율 ${restoration}%`;
+    }
+
+    // === 이펙트 (반짝임) ===
+    function createSparkle() {
+        const sparkle = document.createElement('div');
+        sparkle.className = 'sparkle';
+        // 랜덤 위치
+        const x = 50 + Math.random() * 200;
+        const y = 50 + Math.random() * 200;
+        sparkle.style.left = x + 'px';
+        sparkle.style.top = y + 'px';
+        effectLayer.appendChild(sparkle);
+
+        // 0.5초 뒤 삭제
+        setTimeout(() => sparkle.remove(), 500);
+    }
+
+    // === 이미지 업로드 기능 ===
+    document.getElementById('imgInput').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if(file) {
+            const reader = new FileReader();
+            reader.onload = function(evt) {
+                imgEl.src = evt.target.result;
+                // 초기화
+                restoration = 0;
+                updateVisuals();
+                msgEl.innerText = "새로운 유물 복원 시작!";
+                msgEl.style.color = "#7f8c8d";
+            }
+            reader.readAsDataURL(file);
+        }
+    });
+
+</script>
+</body>
+</html>
